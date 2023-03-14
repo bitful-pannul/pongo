@@ -71,7 +71,7 @@
     =/  =time  (add now.bowl expiration)
     =+  exp=(cut 3 [8 5] time)
     =+  msg=(rap 3 `(list @)`~[exp '%handshake verification'])
-    =+  new=(jam `punch`[exp [`@ux`p r]:(sign msg [our now]:bowl)])
+    =+  new=(jam `punch`[exp (sign msg [our now]:bowl)])
     ::  give subscriber notice of our new punch card, to be QR'd
     :_  this(latest.state `[new time])
     =-  [%give %fact ~[/signer-updates] -]^~
@@ -79,19 +79,18 @@
   ::
       %verify
     ::  take in jammed signature and verify correctness
-    =*  who  src.bowl
     =/  =punch  ;;(punch (cue code.action))
     =+  msg=(rap 3 ~[time.punch '%handshake verification'])
-    ?.  (verify [p.punch who r.punch] msg [our now]:bowl)
+    ?.  (verify +.punch msg [our now]:bowl)
       ~&  >>>  "%scan: received an invalid signature!"
       [(reader-card [%bad-sig ~]) this]
     =/  =time  (rap 3 ~[0x1000.0000.0000.0000 time.punch 0x80.0000])
     ?:  (gth now.bowl time)
       ~&  >>>  "%scan: received an expired signature!"
-      [(reader-card [%expired-sig who]) this]
+      [(reader-card [%expired-sig q.punch]) this]
     ::  give subscriber notice of GOOD signature!
-    ~&  >  "%scan: received signature from {<who>}"
-    [(reader-card [%good-sig who]) this]
+    ~&  >  "%scan: received signature from {<q.punch>}"
+    [(reader-card [%good-sig q.punch]) this]
   ==
   ::
   ::  helpers

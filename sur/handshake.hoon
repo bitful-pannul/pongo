@@ -1,7 +1,7 @@
 |%
 ++  expiration  ~m5
 +$  signature   [p=@ux q=ship r=life]
-+$  punch       [time=@ p=@ux r=life]
++$  punch       [time=@ signature]
 ::
 +$  action
   $%  [%create ~]
