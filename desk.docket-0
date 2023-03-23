@@ -1,7 +1,7 @@
 :~  title+'Pongo'
     info+'Chat by Uqbar'
     color+0x72.7bf2
-    glob-http+['https://pongo-app-distro.s3.us-east-2.amazonaws.com/glob-0v1.1none.skfpp.gohik.44k9t.en5gb.glob' 0v1.1none.skfpp.gohik.44k9t.en5gb]
+    glob-http+['https://pongo-app-distro.s3.us-east-2.amazonaws.com/glob-0v4.te4sf.e7egf.kqs7o.59h54.av3vj.glob' 0v4.te4sf.e7egf.kqs7o.59h54.av3vj]
     image+'https://pongo-app-distro.s3.us-east-2.amazonaws.com/urbit-icon.png'
     base+'pongo'
     version+[1 0 1]
