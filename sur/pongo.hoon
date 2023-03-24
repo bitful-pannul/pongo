@@ -154,8 +154,6 @@
 ::
 +$  action
   $%  [%make-conversation name=@t config=conversation-metadata]
-      ::  generate a member-set from a %posse tag
-      [%make-conversation-from-posse name=@t tag=@t]
       [%leave-conversation =conversation-id]
       ::
       $:  %send-message

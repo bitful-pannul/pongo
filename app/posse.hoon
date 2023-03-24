@@ -81,8 +81,8 @@
       :_  state  :_  ~
       %+  ~(poke pass:io /join-posse)
         [our.bowl %social-graph]
-      :-  %social-graph-edit
-      !>([%posse [%start-tracking controller.action %posse tag.action]])
+      :-  %social-graph-track
+      !>([%posse [%start controller.action tag.action]])
     ==
   ::
   ++  handle-scry
