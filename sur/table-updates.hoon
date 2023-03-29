@@ -1,4 +1,4 @@
-/+  n=nectar
+/-  n=nectar
 |%
 ++  name  %table-updates
 +$  rock  ~
