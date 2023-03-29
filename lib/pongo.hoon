@@ -1,6 +1,13 @@
-/-  *pongo
-/+  sig, n=nectar
+/-  *pongo, nectar
+/+  sig
 |%
+++  nectar-scry
+  |=  [table=@ jam=@ our=@p now=@da]
+  ^-  (list row:nectar)
+  .^  (list row:nectar)  %gx
+    /(scot %p our)/nectar/(scot %da now)/jammed-query/pongo/[table]/[jam]/noun
+  ==
+::
 ++  give-push-notification
   |=  [unreads=@ud =conversation =message =notif-settings our=ship now=@da]
   ^-  (unit card:agent:gall)
@@ -67,22 +74,24 @@
 ::
 ::  type used for search threads
 +$  search
-  $:  =database:n
-      only-in=(unit conversation-id)
+  $:  only-in=(unit conversation-id)
       only-author=(unit @p)
       phrase=@t
   ==
 ::
 ++  do-search
-  |=  search
+  |=  [search our=@p now=@da]
   ^-  (list [conversation-id message])
   ::  TODO handle searches across all conversations
-  %+  turn
-    =-  -:(~(q db:n database) %pongo [%select (need only-in) where=-])
+  =/  jam
+    %-  jam  ^-  query:nectar
+    :+  %select  (need only-in)
     =+  [%s %content %& %text-find (trip phrase)]
     ?~  only-author  -
     [%and [%s %author %& %eq u.only-author] -]
-  |=  =row:n
+  %+  turn
+    (nectar-scry (need only-in) jam our now)
+  |=  =row:nectar
   [(need only-in) !<(message [-:!>(*message) row])]
 ::
 ::  utils
@@ -110,59 +119,6 @@
       'on message '
       (scot %ud on)
   ==
-::
-++  print-message
-  |=  =message
-  ^-  @t
-  ?+    kind.message
-      %+  rap  3
-      :~  'Message ('
-          (scot %ud id.message)
-          ') from '
-          (scot %p author.message)
-          ': '
-          content.message
-      ==
-  ::
-      %member-add
-    %^  cat  3
-      content.message
-    ' joined the conversation.'
-  ::
-      %member-remove
-    %^  cat  3
-      content.message
-    ' left the conversation.'
-  ::
-      %change-name
-    %^  cat  3
-      'Conversation name changed to '
-    (cat 3 content.message '.')
-  ::
-      %leader-add
-    %^  cat  3
-      content.message
-    ' is now managing the conversation.'
-  ::
-      %leader-remove
-    %^  cat  3
-      content.message
-    ' is no longer managing the conversation.'
-  ==
-::
-++  print-reaction
-  |=  [src=ship =ping]
-  ^-  @t
-  ?>  ?=(%react -.ping)
-  %-  crip
-  "{<src>} reacted {<reaction.ping>} to message {<on.ping>}"
-::
-++  print-edit
-  |=  [src=ship =ping]
-  ^-  @t
-  ?>  ?=(%edit -.ping)
-  %-  crip
-  "{<src>} edited message {<on.ping>} to {<edit.ping>}"
 ::
 ::  json creation
 ::
@@ -318,4 +274,59 @@
       ==
     ==
   --
+::
+::  NOT USING THESE ATM
+::
+++  print-message
+  |=  =message
+  ^-  @t
+  ?+    kind.message
+      %+  rap  3
+      :~  'Message ('
+          (scot %ud id.message)
+          ') from '
+          (scot %p author.message)
+          ': '
+          content.message
+      ==
+  ::
+      %member-add
+    %^  cat  3
+      content.message
+    ' joined the conversation.'
+  ::
+      %member-remove
+    %^  cat  3
+      content.message
+    ' left the conversation.'
+  ::
+      %change-name
+    %^  cat  3
+      'Conversation name changed to '
+    (cat 3 content.message '.')
+  ::
+      %leader-add
+    %^  cat  3
+      content.message
+    ' is now managing the conversation.'
+  ::
+      %leader-remove
+    %^  cat  3
+      content.message
+    ' is no longer managing the conversation.'
+  ==
+::
+++  print-reaction
+  |=  [src=ship =ping]
+  ^-  @t
+  ?>  ?=(%react -.ping)
+  %-  crip
+  "{<src>} reacted {<reaction.ping>} to message {<on.ping>}"
+::
+++  print-edit
+  |=  [src=ship =ping]
+  ^-  @t
+  ?>  ?=(%edit -.ping)
+  %-  crip
+  "{<src>} edited message {<on.ping>} to {<edit.ping>}"
 --
