@@ -3,12 +3,6 @@
 /+  verb, dbug, default-agent, io=agentio,
     *pongo, *sss, sig
 |%
-::
-::  pongo is currently tuned to auto-accept invites to new conversations.
-::  it's also set up to automatically allow ships to join an *open*
-::  conversation if they have the ID.
-::  these can be turned off with a few small changes.
-::
 ::  arbitrary limit for some measure of performance guarantees
 ++  message-length-limit      1.024
 ::
@@ -19,7 +13,6 @@
       ::  "deep state" = ELIMINATED
       ::  "configuration state"
       =notif-settings
-      invites=(map conversation-id [from=@p =conversation])
       invites-sent=(jug conversation-id @p)
   ==
 +$  card  card:agent:gall
@@ -28,20 +21,15 @@
 ^-  agent:gall
 %+  verb  &
 %-  agent:dbug
-::  SSS declarations
-=/  updates-sub  (mk-subs table-updates ,[%updates @ @ ~])
 ::
 =|  state=state-2
 =<  |_  =bowl:gall
     +*  this  .
         hc    ~(. +> bowl)
         def   ~(. (default-agent this %|) bowl)
-        da-sub
-      =/  da  (da table-updates ,[%updates @ @ ~])
-      (da updates-sub bowl -:!>(*result:da) -:!>(*from:da) -:!>(*fail:da))
     ::
     ++  on-init
-      :_  this(state [%2 ['' '' %low] ~ ~])
+      :_  this(state [%2 ['' '' %low] ~])
       ::  produce our conversations table
       ::  this will fail if it already exists, and that's okay!
       ::  TODO create our stored procedures here!
@@ -56,16 +44,16 @@
         (make-indices:nectar conversations-indices)
       ~
     ::
-    ++  on-save  !>([state updates-sub])
+    ++  on-save  !>(state)
     ::
     ++  on-load
       |=  =vase
       ^-  (quip card _this)
       ?:  =(%0 -.q.vase)  on-init
       ?:  =(%1 -.q.vase)  on-init
-      =/  old  !<([=state-2 =_updates-sub] vase)
+      =/  old  !<(state-2 vase)
       ::  check to make sure nectar has conversations table, add if not
-      :_  this(state state-2.old, updates-sub updates-sub.old)
+      :_  this(state old)
       :_  ~
       %+  ~(poke pass:io /make-table)  [our.bowl %nectar]
       :-  %nectar-query
@@ -80,38 +68,20 @@
     ++  on-poke
       |=  [=mark =vase]
       ^-  (quip card _this)
-      ?:  ?=(%sss-table-updates mark)
-        =^  cards  updates-sub
-          (apply:da-sub !<(into:da-sub (fled vase)))
-        [cards this]
-      =^  cards1  state
+      =^  cards  state
         ?+    mark  `state
             %ping
           (handle-ping:hc !<(ping vase))
             %entry
           (handle-entry:hc !<(entry vase))
+            %pongo-action
+          (handle-action:hc !<(action vase))
             %wallet-update
           (handle-wallet-update:hc !<(wallet-update:wallet vase))
             %uqbar-share-address
           (handle-address-share:hc !<(share-address:uqbar vase))
-            %sss-on-rock
-          =/  msg  !<(from:da-sub (fled vase))
-          ?-    -.msg
-              [%updates @ @ ~]
-            ::  TODO this is where we produce updates for frontend
-            ::  based on incoming messages/reactions/etc!!!
-            ?~  wave.msg  `state
-            ::  if the message adjust conversation metadata, do that too
-            (update-conversation:hc u.wave.msg)
-          ==
         ==
-      ::  TODO fix this disgusting mess
-      =/  [cards2=(list card) ug=state-2 ly=_updates-sub]
-        ?+    mark  `[state updates-sub]
-            %pongo-action
-          (handle-action:hc !<(action vase) updates-sub)
-        ==
-      [(weld cards1 cards2) this(state ug, updates-sub ly)]
+      [cards this]
     ::
     ++  on-peek   handle-scry:hc
     ::
@@ -134,20 +104,6 @@
     ++  on-agent
       |=  [=wire =sign:agent:gall]
       ^-  (quip card _this)
-      ::  SSS wires
-      ::
-      ?:  ?=([~ %sss %on-rock @ @ @ %updates @ @ ~] wire)
-        ?>  ?=(%poke-ack -.sign)
-        ?~  p.sign  `this
-        =.  updates-sub  (chit:da-sub |3:wire sign)
-        `this
-      ?:  ?=([~ %sss %scry-request @ @ @ %updates @ @ ~] wire)
-        ?>  ?=(%poke-ack -.sign)
-        ?~  p.sign  `this
-        =^  cards  updates-sub  (tell:da-sub |3:wire sign)
-        [cards this]
-      ::  other wires
-      ::
       ?+    -.wire  (on-agent:def wire sign)
           %send-tokens-thread
         ?+    -.sign  (on-agent:def wire sign)
@@ -178,43 +134,51 @@
         ==
       ==
     ::
-    ++  on-arvo
-      |=  [=wire =sign-arvo]
-      ^-  (quip card _this)
-      ?+    wire  `this
-          [~ %sss %behn @ @ @ %updates @ @ ~]
-        [(behn:da-sub |3:wire) this]
-      ==
+    ++  on-arvo   on-arvo:def
     ++  on-leave  on-leave:def
     ++  on-fail   on-fail:def
     --
 ::
 |_  bowl=bowl:gall
-+*  da-sub
-  =/  da  (da table-updates ,[%updates @ @ ~])
-  (da updates-sub bowl -:!>(*result:da) -:!>(*from:da) -:!>(*fail:da))
-::
-::  +update-conversation: upon receiving an update from %nectar that
-::  our table has had a query applied to it, make any necessary changes
-::  to our local conversation representation based on new messages/edits
-::
-++  update-conversation
-  |=  =query:nectar
+++  handle-ping
+  |=  =ping
   ^-  (quip card _state)
-  ?+    -.query  `state  ::  TODO the other queries we do!
-      %insert
-    ::  this is a new message
-    ?~  rows.query  `state
-    =/  =message  !<(message [-:!>(*message) i.rows.query])
-    ?~  conv=(fetch-conversation table.query)
-      `state
-    =*  convo  u.conv
+  ?~  conv=(fetch-conversation -.+.ping)
+    ~|("pongo: can't find conversation {<-.+.ping>}" !!)
+  =*  convo  u.conv
+  =?    ping
+      &(?=(%message -.ping) =(our.bowl router.convo))
+    ::  as router, set proper message ID
+    ping(id.message +(last-message.convo))
+  =/  router-cards=(list card)
+    ::  TODO replace this with SSS
+    ?.  =(our.bowl router.convo)  ~
+    ::  we are the router; forward the ping to all participants
+    %+  turn  ~(tap in (~(del in members.p.meta.convo) our.bowl))
+    |=  =ship
+    (~(poke pass:io /routed-message) [ship %pongo] ping+!>(ping))
+  ?-    -.ping
+      %message
+    =*  message  message.ping
+    ::  after validating message, insert it in our messages table
+    =/  message-hash  (make-message-hash [content author timestamp]:message)
+    ~|  "pongo: received invalid message"
+    ~|  message
+    ?>  ?&  (validate:sig our.bowl p.signature.message message-hash now.bowl)
+            (~(has in members.p.meta.convo) author.message)
+            (lte (met 3 content.message) message-length-limit)
+            (valid-message-contents message convo)
+        ==
+    ::  set local timestamp (throwing away ability to re-verify sig btw!!!)
+    =.  timestamp.message  now.bowl
     ::  depending on message type, apply changes to conversation metadata
     =^  cards  convo
       ?+    kind.message
           ::  text, poll, send-tokens, app-link
           ?:  muted.convo  `convo
-          =-  ?~  -  `convo  [u.-^~ convo]
+          =-  :_  convo
+              :-  (give-update [%message id.convo message])
+              ?~  -  ~  u.-^~
           %:  give-push-notification
               get-total-unreads  ::  function
               convo  message
@@ -266,59 +230,39 @@
       ::
           %change-router  !!  ::  TBD
       ==
+    ::  if this message is for a DM that we've "deleted", set conversation
+    ::  to undeleted and add a new messages table for it.
     :_  state
-    :_  cards
-    %+  ~(poke pass:io /update-convo)
-      [our.bowl %nectar]
-    :-  %nectar-query
-    !>  ^-  query-poke:nectar
-    :-  %pongo
-    =-  [%update-rows %conversations ~[-]]
-    %=  convo
-      last-active  now.bowl
-      last-message  id.message
-    ==
-  ==
-::
-++  handle-ping
-  |=  =ping
-  ^-  (quip card _state)
-  ?~  conv=(fetch-conversation -.+.ping)
-    ~|("pongo: can't find conversation {<-.+.ping>}" !!)
-  =*  convo  u.conv
-  ?.  =(our.bowl router.convo)
-    ::  we are not router; fail
-    ~|("pongo: got message while not router" !!)
-  ::  we are the router; we must integrate the message/edit/reaction
-  ::  into our messages table, which will be synced to participants
-  ?-    -.ping
-      %message
-    =*  message  message.ping
-    ::  after validating message, insert it in our messages table
-    =/  message-hash  (make-message-hash [content author timestamp]:message)
-    ~|  "pongo: received invalid message, as router"
-    ~|  message
-    ?>  ?&  (validate:sig our.bowl p.signature.message message-hash now.bowl)
-            (~(has in members.p.meta.convo) author.message)
-            (lte (met 3 content.message) message-length-limit)
-            (valid-message-contents message convo)
-        ==
-    :_  state  :_  ~
-    %+  ~(poke pass:io /insert)
-      [our.bowl %nectar]
-    :-  %nectar-query
-    !>  ^-  query-poke:nectar
-    =-  pongo+[%insert id.convo ~[-]]
-    ::  set proper timestamp and message ID
-    ::  TODO use working autoincrement in nectar
-    %=  message
-      id  +(last-message.convo)
-      timestamp  now.bowl
-    ==
+    %+  weld
+      ?.  &(deleted.convo ?=(%dm -.p.meta.convo))
+        cards
+      (weld (make-messages-table id.convo) cards)
+    ^-  (list card)
+    :+  %+  ~(poke pass:io /insert)
+          [our.bowl %nectar]
+        :-  %nectar-query
+        !>  ^-  query-poke:nectar
+        pongo+[%insert id.convo ~[message]]
+      %+  ~(poke pass:io /update-convo)
+        [our.bowl %nectar]
+      :-  %nectar-query
+      !>  ^-  query-poke:nectar
+      :-  %pongo
+      =-  [%update-rows %conversations ~[-]]
+      %=  convo
+        deleted       %.n
+        last-active   timestamp.message
+        last-message  id.message
+      ==
+    router-cards
   ::
       %edit
     ::  apply an edit to a message
-    :_  state  :_  ~
+    =/  edit-hash  (make-reaction-edit-hash [edit on]:ping)
+    ~|  "pongo: received invalid signature on message edit"
+    ?>  (validate:sig our.bowl sig.ping edit-hash now.bowl)
+    :_  state
+    :_  router-cards
     %+  ~(poke pass:io /insert)
       [our.bowl %nectar]
     :-  %nectar-query
@@ -326,7 +270,7 @@
     :-  %pongo
     :^  %update  id.convo
       :+  %and  [%s %id %& %eq on.ping]
-      :+  %and  [%s %author %& %eq src.bowl]
+      :+  %and  [%s %author %& %eq q.sig.ping]
       [%s %kind %& %eq %text]
     :~  [%content |=(value:nectar edit.ping)]
         [%edited |=(value:nectar %.y)]
@@ -334,7 +278,11 @@
   ::
       %react
     ::  apply a reaction to a message
-    :_  state  :_  ~
+    =/  reaction-hash  (make-reaction-edit-hash [reaction on]:ping)
+    ~|  "pongo: received invalid signature on message reaction"
+    ?>  (validate:sig our.bowl sig.ping reaction-hash now.bowl)
+    :_  state
+    :_  router-cards
     %+  ~(poke pass:io /insert)
       [our.bowl %nectar]
     :-  %nectar-query
@@ -355,60 +303,35 @@
   ^-  (quip card _state)
   ?:  ?=(%invite -.entry)
     ::  we've received an invite to a conversation
-    =+  [src.bowl conversation.entry]
-    :_  state(invites (~(put by invites.state) id.conversation.entry -))
+    :_  state
     :~  (give-update [%invite conversation.entry])
-        ::  remove this to turn off auto-accept
         %+  ~(poke pass:io /accept-invite)  [our.bowl %pongo]
-        pongo-action+!>(`action`[%accept-invite id.conversation.entry])
+        pongo-action+!>(`action`[%accept-invite src.bowl conversation.entry])
     ==
-  ?~  conv=(fetch-conversation conversation-id.entry)
-    ::  we got pinged for a conversation we don't know about
-    ::  TODO try to join it?
-    !!
-  =*  convo  u.conv
-  ?-    -.entry
-      %accept-invite
-    ::  an invite we sent has been accepted
-    ::  create a message in conversation with kind %member-add
-    ?>  (~(has ju invites-sent.state) id.convo src.bowl)
-    =/  hash  (make-message-hash (scot %p src.bowl) [our now]:bowl)
-    :_  state(invites-sent (~(del ju invites-sent.state) id.convo src.bowl))
-    :_  ~
-    %+  ~(poke pass:io /route-member-add-message)
-      [router.convo %pongo]
-    :-  %ping
-    !>  ^-  ping
-    :+  %message  id.convo
-    :*  *message-id
-        our.bowl
-        signature=[%b (sign:sig our.bowl now.bowl hash)]
-        now.bowl
-        %member-add
-        (scot %p src.bowl)
-        [%.n ~ [%m ~] [%s ~] ~]
-    ==
-  ::
-      %reject-invite
-    ::  an invite we sent has been rejected
-    ~&  >>  "%pongo: {<src.bowl>} rejected invite to conversation {<id.convo>}"
-    `state(invites-sent (~(del ju invites-sent.state) id.convo src.bowl))
-  ::
-      %invite-request
-    ::  someone wants to join one of our conversations
-    ::  if we don't have ID, or convo is not FFA, reject
-    ::  otherwise send them an invite! (can remove this)
-    ?>  ?=(?(%open %dm) -.p.meta.convo)
-    :_  state(invites-sent (~(put ju invites-sent.state) id.convo src.bowl))
-    :_  ~
-    %+  ~(poke pass:io /send-invite)
-      [src.bowl %pongo]
-    entry+!>(`^entry`[%invite convo])
+  =/  convo  (need (fetch-conversation conversation-id.entry))
+  ::  an invite we sent has been accepted
+  ::  create a message in conversation with kind %member-add
+  ?>  (~(has ju invites-sent.state) id.convo src.bowl)
+  =/  hash  (make-message-hash (scot %p src.bowl) [our now]:bowl)
+  :_  state(invites-sent (~(del ju invites-sent.state) id.convo src.bowl))
+  :_  ~
+  %+  ~(poke pass:io /route-member-add-message)
+    [router.convo %pongo]
+  :-  %ping
+  !>  ^-  ping
+  :+  %message  id.convo
+  :*  *message-id
+      our.bowl
+      signature=[%b (sign:sig our.bowl now.bowl hash)]
+      now.bowl
+      %member-add
+      (scot %p src.bowl)
+      [%.n ~ [%m ~] [%s ~] ~]
   ==
 ::
-::  +valid-message-contents: as a router node, verify that messages which
-::  adjust the "leadership structure" of the groupchat are performed by
-::  those with the privilege to do so.
+::  +valid-message-contents: verify that messages which adjust the
+::  "leadership structure" of the groupchat are performed by those
+::  with the privilege to do so.
 ::
 ++  valid-message-contents
   |=  [=message convo=conversation]
@@ -447,8 +370,8 @@
   ==
 ::
 ++  handle-action
-  |=  [=action =_updates-sub]
-  ^-  (quip card [_state _updates-sub])
+  |=  =action
+  ^-  (quip card _state)
   ::
   ::  we receive actions from our own client app
   ::
@@ -472,9 +395,6 @@
         ?.  =(member-count 2)
           ~|("pongo: error: tried to make multiparty DM" !!)
         `@ux`(sham (rap 3 ~(tap in members.config.action)))
-      ::  enforce group chats have at least 3 members
-      ?.  (gth member-count 2)
-        ~|("pongo: error: tried to make group with <3 members" !!)
       `@ux`(sham (rap 3 ~[our.bowl now.bowl name.action]))
     =/  convo=conversation
       :*  `@ux`id
@@ -484,37 +404,9 @@
           last-read=0
           router=our.bowl
           [%b config.action]
-          muted=%.n
-          ~
+          [%.n %.n ~]
       ==
-    ::  add this conversation to our table and create a messages table for it
-    ::  set the table permissions to the members of the convo
-    ::  start watching nectar publication for updates to messages table
-    =^  cards  updates-sub
-      (surf:da-sub our.bowl %nectar [%updates %pongo id.convo ~])
-    =.  cards
-      :^  %+  ~(poke pass:io /make-table)
-            [our.bowl %nectar]
-          :-  %nectar-query
-          !>(`query-poke:nectar`pongo+[%update-rows %conversations ~[convo]])
-      ::
-          %+  ~(poke pass:io /make-table)
-            [our.bowl %nectar]
-          :-  %nectar-query
-          !>  ^-  query-poke:nectar
-          :-  %pongo
-          :+  %add-table  id.convo
-          :^    (make-schema:nectar messages-schema)
-              primary-key=~[%id]
-            (make-indices:nectar messages-indices)
-          ~
-      ::
-          %+  ~(poke pass:io /make-table)
-            [our.bowl %nectar]
-          :-  %nectar-set-perms
-          !>  ^-  set-perms:nectar
-          [%pongo id.convo]^[%set members.config.action]
-      cards
+    ::  add this conversation to our table and create a messages table for it,
     ::  poke all indicated members in metadata with invites
     =/  mems  ~(tap in (~(del in members.config.action) our.bowl))
     =.  invites-sent.state
@@ -524,26 +416,47 @@
         invites-sent.state  (~(put ju invites-sent.state) id.convo i.mems)
       ==
     ~&  >>  "%pongo: made conversation id: {<id.convo>} and invited {<mems>}"
-    :_  [state updates-sub]
-    %+  welp  cards
+    :_  state
+    %+  welp  (make-messages-table id.convo)
+    :-  %+  ~(poke pass:io /add-convo)
+          [our.bowl %nectar]
+        :-  %nectar-query
+        !>  ^-  query-poke:nectar
+        pongo+[%update-rows %conversations ~[convo]]
     %+  turn  mems
     |=  to=@p
     %+  ~(poke pass:io /send-invite)  [to %pongo]
     entry+!>(`entry`[%invite convo])
   ::
       %leave-conversation
-    ::  leave a conversation we're currently in
-    ::  delete it from our conversations table, tell nectar to stop
-    ::  tracking the router's table, and poke chat telling it we left.
-    ::  TODO: if we leave *as router*, we should assign a new router!!
-    ?~  convo=(fetch-conversation conversation-id.action)
+    ::  leave a conversation we're currently in. poke chat telling it we left,
+    ::  delete it from our conversations table, drop the messages table.
+    ::
+    ::  TODO: for groupchats, if we leave *as router*, assign a new router!!
+    ::
+    :_  state
+    ?~  conv=(fetch-conversation conversation-id.action)
       ~|("%pongo: couldn't find that conversation id" !!)
-    ?<  =(our.bowl router.u.convo)
-    :_  [state updates-sub]
+    =*  convo  u.conv
+    :-  %+  ~(poke pass:io /drop-convo)
+          [our.bowl %nectar]
+        :-  %nectar-query
+        !>  ^-  query-poke:nectar
+        [%pongo %drop-table id.convo]
+    ?:  ?=(%dm -.p.meta.convo)
+      ::  for DMs, you don't "leave", you just delete your local representation.
+      ::  if you get a new message in that DM it will look like the first.
+      :~  %+  ~(poke pass:io /leave-convo)
+            [our.bowl %nectar]
+          :-  %nectar-query
+          !>  ^-  query-poke:nectar
+          pongo+[%update-rows %conversations ~[convo(deleted %.y)]]
+      ==
+    ::  for groupchats, tell everyone you're leaving
     :~  %+  ~(poke pass:io /send-member-remove)
           [our.bowl %pongo]
         =-  pongo-action+!>(`^action`[%send-message -])
-        ['' id.u.convo %member-remove (scot %p our.bowl) ~ ~]
+        ['' id.convo %member-remove (scot %p our.bowl) ~ ~]
     ::
         %+  ~(poke pass:io /leave-convo)
           [our.bowl %nectar]
@@ -552,10 +465,6 @@
         :-  %pongo
         :+  %delete  %conversations
         [%s %id %& %eq conversation-id.action]
-    ::
-        %+  ~(poke pass:io /leave-convo)
-          [our.bowl %nectar]
-        nectar-track+!>(`track:nectar`pongo+[%stop [router %pongo^id]:u.convo])
     ==
   ::
       %send-message
@@ -566,7 +475,7 @@
       :*  id=0  ::  router will make this
           author=our.bowl
           signature=[%b (sign:sig our.bowl now.bowl hash)]
-          timestamp=now.bowl  ::  TODO ?
+          timestamp=now.bowl
           message-kind.action
           content.action
           edited=%.n
@@ -575,7 +484,7 @@
       ==
     ?~  convo=(fetch-conversation conversation-id.action)
       ~|("%pongo: couldn't find that conversation id" !!)
-    :_  [state updates-sub]
+    :_  state
     :~  (give-update [%sending id.u.convo identifier.action])
         %+  ~(poke pass:io /send-message)
           [router.u.convo %pongo]
@@ -585,14 +494,17 @@
       ?(%send-message-edit %send-reaction)
     ?~  convo=(fetch-conversation conversation-id.action)
       ~|("%pongo: couldn't find that conversation id" !!)
-    :_  [state updates-sub]  :_  ~
+    =/  hash  (make-reaction-edit-hash |3:action on.action)
+    =/  =ship-sig
+      (sign:sig our.bowl now.bowl hash)
+    :_  state  :_  ~
     %+  ~(poke pass:io /send-edit)
       [router.u.convo %pongo]
     :-  %ping
     !>  ^-  ping
     ?-  -.action
-      %send-message-edit  edit+[conversation-id on edit]:action
-      %send-reaction      react+[conversation-id on reaction]:action
+      %send-message-edit  edit+id.u.convo^ship-sig^|2:action
+      %send-reaction      react+id.u.convo^ship-sig^|2:action
     ==
   ::
       %send-tokens
@@ -601,7 +513,7 @@
     =/  start-args
       :^  ~  `tid  byk.bowl(r da+now.bowl)
       token-send+!>(`^action`action)
-    :_  [state updates-sub]  :_  ~
+    :_  state  :_  ~
     %+  ~(poke pass:io /thread/[ta-now])
       [our.bowl %spider]
     spider-start+!>(start-args)
@@ -610,8 +522,8 @@
     ::  if read id is newer than current saved read id, replace in convo
     ?~  convo=(fetch-conversation conversation-id.action)
       ~|("%pongo: couldn't find that conversation id" !!)
-    ?.  (gth message-id.action last-read.u.convo)  `[state updates-sub]
-    :_  [state updates-sub]
+    ?.  (gth message-id.action last-read.u.convo)  `state
+    :_  state
     :~  ::  TODO: send out a new badge notif for app to update unread count
         %+  ~(poke pass:io /read-convo)
           [our.bowl %nectar]
@@ -626,8 +538,7 @@
     ::  create an invite and send to someone
     ?~  convo=(fetch-conversation conversation-id.action)
       ~|("%pongo: couldn't find that conversation id" !!)
-    :_  :_  updates-sub
-        state(invites-sent (~(put ju invites-sent.state) id.u.convo to.action))
+    :_  state(invites-sent (~(put ju invites-sent.state) id.u.convo to.action))
     :_  ~
     %+  ~(poke pass:io /send-invite)
       [to.action %pongo]
@@ -635,51 +546,22 @@
   ::
       %accept-invite
     ::  accept an invite we've been sent
-    ::  add this convo to our conversations table,
-    ::  start tracking router's messages table
-    =/  [from=@p convo=conversation]
-      (~(got by invites.state) conversation-id.action)
+    ::  add this convo to our conversations table, make a messages table
+    =/  [from=@p convo=conversation]  +.action
     =.  members.p.meta.convo
       (~(put in members.p.meta.convo) our.bowl)
-    =^  cards  updates-sub
-      (surf:da-sub our.bowl %nectar [%updates %pongo id.convo ~])
-    :_  [state(invites (~(del by invites.state) id.convo)) updates-sub]
-    :^  %+  ~(poke pass:io /accept-invite)
-            [from %pongo]
-          entry+!>(`entry`[%accept-invite id.convo])
-    ::
-        %+  ~(poke pass:io /add-convo)
-          [our.bowl %nectar]
-        :-  %nectar-query
-        !>  ^-  query-poke:nectar
-        :-  %pongo
-        :+  %insert  %conversations
-        ~[convo(last-active now.bowl, last-read 0)]
-    ::
-        %+  ~(poke pass:io /nectar-track)
-          [our.bowl %nectar]
-        :-  %nectar-track
-        !>  ^-  track:nectar
-        pongo+[%start router.convo pongo+id.convo]
-    cards
-  ::
-      %reject-invite
-    ::  reject an invite we've been sent
-    ?~  invite=(~(get by invites.state) conversation-id.action)
-      `[state updates-sub]
-    :_  :_  updates-sub
-        state(invites (~(del by invites.state) conversation-id.action))
-    :_  ~
-    %+  ~(poke pass:io /accept-invite)
-      [from.u.invite %pongo]
-    entry+!>(`entry`[%reject-invite conversation-id.action])
-  ::
-      %make-invite-request
-    ::  try to join a public conversation off id and existing member
-    :_  [state updates-sub]  :_  ~
-    %+  ~(poke pass:io /request-invite)
-      [to.action %pongo]
-    entry+!>(`entry`[%invite-request conversation-id.action])
+    :_  state
+    :+  %+  ~(poke pass:io /accept-invite)
+          [from %pongo]
+        entry+!>(`entry`[%accept-invite id.convo])
+      %+  ~(poke pass:io /add-convo)
+        [our.bowl %nectar]
+      :-  %nectar-query
+      !>  ^-  query-poke:nectar
+      :-  %pongo
+      :+  %insert  %conversations
+      ~[convo(last-active now.bowl, last-read 0)]
+    (make-messages-table id.convo)
   ::
       %search
     ::  search in messages for a phrase. can filter by conversation
@@ -691,7 +573,7 @@
     =/  start-args
       :^  ~  `tid  byk.bowl(r da+now.bowl)
       search+!>(`search`+.+.action)
-    :_  [state updates-sub]
+    :_  state
     :~  %+  ~(poke pass:io /thread/[ta-now])
           [our.bowl %spider]
         spider-start+!>(start-args)
@@ -703,27 +585,26 @@
       %cancel-search
     =/  tid  `@ta`(cat 3 'search_' (scot %ux uid.action))
     =/  ta-now  `@ta`(scot %da now.bowl)
-    :_  [state updates-sub]  :_  ~
+    :_  state  :_  ~
     %+  ~(poke pass:io /thread-stop/[ta-now])
       [our.bowl %spider]
     spider-stop+!>([tid %.y])
   ::
       %set-notifications
-    `[state(notif-settings notif-settings.action) updates-sub]
+    `state(notif-settings notif-settings.action)
   ::
       %set-notif-token
     :-  ~
-    :_  updates-sub
     %=  state
       expo-token.notif-settings  expo-token.action
       ship-url.notif-settings    ship-url.action
     ==
   ::
       %set-notif-level
-    `[state(level.notif-settings level.action) updates-sub]
+    `state(level.notif-settings level.action)
   ::
       ?(%mute-conversation %unmute-conversation)
-    :_  [state updates-sub]  :_  ~
+    :_  state  :_  ~
     %+  ~(poke pass:io /mute-unmute-conversation)
       [our.bowl %nectar]
     :-  %nectar-query
@@ -787,6 +668,8 @@
       (nectar-scry %conversations - [our now]:bowl)
     |=  =row:nectar
     =/  convo  !<(conversation [-:!>(*conversation) row])
+    ?:  deleted.convo
+      [convo ~ 0]
     ::  grab last message from each conversation, if any
     =/  last-message=(unit message)
       =-  ?~(- ~ `!<(message [-:!>(*message) (head -)]))
@@ -805,8 +688,8 @@
     =-  ``pongo-update+!>(`pongo-update`[%message-list -])
     ^-  (list message)
     =/  convo-id  (slav %ux i.t.t.path)
-    ?~  convo=(fetch-conversation convo-id)
-      ~
+    ?~  convo=(fetch-conversation convo-id)  ~
+    ?:  deleted.u.convo  ~
     %+  turn
       =+  [%select id.u.convo where=[%n ~]]
       (nectar-scry id.u.convo - [our now]:bowl)
@@ -828,6 +711,7 @@
     =-  ``pongo-update+!>(`pongo-update`[%message-list -])
     ^-  (list message)
     ?~  convo=(fetch-conversation convo-id)  ~
+    ?:  deleted.u.convo  ~
     %+  turn
       =-  (nectar-scry id.u.convo - [our now]:bowl)
       :+  %select  id.u.convo
@@ -841,6 +725,7 @@
     =/  convo-id    (slav %ux i.t.t.path)
     =/  message-id  (slav %ud i.t.t.t.path)
     ?~  convo=(fetch-conversation convo-id)  [~ ~]
+    ?:  deleted.u.convo  [~ ~]
     =-  ``pongo-update+!>(`pongo-update`[%notification -])
     :-  name.u.convo
     =<  [author content]
@@ -849,11 +734,6 @@
     %-  head
     =-  (nectar-scry id.u.convo - [our now]:bowl)
     [%select id.u.convo [%s %id %& %eq message-id]]
-  ::
-  ::  get all sent and received invites
-  ::
-      [%x %invites ~]
-    ``pongo-update+!>(`pongo-update`[%invites invites-sent.state invites.state])
   ::
   ::  get current notification level
   ::
@@ -889,4 +769,24 @@
   ::  ~&  >>  "giving fact to frontend: "
   ::  ~&  >>  (crip (en-json:html (update-to-json:parsing upd)))
   (fact:io pongo-update+!>(upd) ~[/updates])
+::
+++  make-messages-table
+  |=  id=@
+  ^-  (list card)
+  :+  %+  ~(poke pass:io /make-table)
+        [our.bowl %nectar]
+      :-  %nectar-query
+      !>  ^-  query-poke:nectar
+      :-  %pongo
+      :+  %add-table  id
+      :^    (make-schema:nectar messages-schema)
+          primary-key=~[%id]
+        (make-indices:nectar messages-indices)
+      ~
+    %+  ~(poke pass:io /make-private)
+      [our.bowl %nectar]
+    :-  %nectar-set-perms
+    !>  ^-  set-perms:nectar
+    [%pongo id]^[%private ~]
+  ~
 --

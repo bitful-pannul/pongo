@@ -5,6 +5,7 @@
       ship-url=@t
       level=?(%off %low %medium %high)
   ==
++$  ship-sig  [p=@ux q=ship r=life]
 ::
 ::  message table schema: a table handles one conversation
 ::
@@ -35,7 +36,7 @@
 +$  message
   $:  id=message-id
       author=@p
-      signature=[%b p=[p=@ux q=ship r=life]]
+      signature=[%b p=ship-sig]
       timestamp=@da
       kind=message-kind
       content=@t
@@ -81,7 +82,8 @@
       [%last-read [4 | %ud]]     ::  id of message we last saw
       [%router [5 | %p]]
       [%members [6 | %blob]]     ::  members and type of convo
-      [%muted [7 | %f]]
+      [%deleted [7 | %f]]
+      [%muted [8 | %f]]
   ==
 ::
 ++  conversations-indices
@@ -106,6 +108,7 @@
       last-read=message-id
       router=@p
       meta=[%b p=conversation-metadata]
+      deleted=?
       muted=?
       ~
   ==
@@ -117,13 +120,12 @@
   ==
 ::
 ::  all messaging is done through pings.
-::  pings are all sent to router, who updates their nectar database,
-::  which is then sync'd out to all members of conversation.
+::  pings are all sent to router
 ::
 +$  ping
   $%  [%message =conversation-id =message]
-      [%edit =conversation-id on=message-id edit=@t]
-      [%react =conversation-id on=message-id =reaction]
+      [%edit =conversation-id sig=ship-sig on=message-id edit=@t]
+      [%react =conversation-id sig=ship-sig on=message-id =reaction]
   ==
 ::
 ::  entry pokes handle creating and joining conversations.
@@ -131,11 +133,6 @@
 +$  entry
   $%  [%invite =conversation]            ::  person creating the invite sends
       [%accept-invite =conversation-id]  ::  %member-add message upon accept
-      [%reject-invite =conversation-id]
-      ::  this allows any ship to request to join *free-for-all* convos
-      ::  if they know the convo ID and the @p of a member ship.
-      ::  app is tuned to automatically accept these, can be turned off.
-      [%invite-request =conversation-id]
   ==
 ::
 ::  pokes that our frontend performs:
@@ -168,9 +165,7 @@
       [%read-message =conversation-id =message-id]
       ::
       [%make-invite to=@p =conversation-id]
-      [%accept-invite =conversation-id]
-      [%reject-invite =conversation-id]
-      [%make-invite-request to=@p =conversation-id]  ::  FFA convos only!
+      [%accept-invite from=@p =conversation]
       ::
       $:  %search  uid=@ux
           only-in=(unit conversation-id)

@@ -109,12 +109,12 @@
       content
   ==
 ::
-++  make-reaction-hash
+++  make-reaction-edit-hash
   |=  [=reaction on=message-id]
   ^-  @
   %-  sham
   %+  rap  3
-  :~  'signed-pongo-react: '
+  :~  'signed-pongo-react-edit: '
       reaction
       'on message '
       (scot %ud on)
