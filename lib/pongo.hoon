@@ -2,10 +2,11 @@
 /+  sig
 |%
 ++  nectar-scry
-  |=  [table=@ jam=@ our=@p now=@da]
+  |=  [table=@ =query:nectar our=@p now=@da]
   ^-  (list row:nectar)
   .^  (list row:nectar)  %gx
-    /(scot %p our)/nectar/(scot %da now)/jammed-query/pongo/[table]/[jam]/noun
+    %+  weld  /(scot %p our)/nectar/(scot %da now)/jammed-query
+    /pongo/[table]/(jam query)/noun
   ==
 ::
 ++  give-push-notification
@@ -83,14 +84,13 @@
   |=  [search our=@p now=@da]
   ^-  (list [conversation-id message])
   ::  TODO handle searches across all conversations
-  =/  jam
-    %-  jam  ^-  query:nectar
+  %+  turn
+    =-  (nectar-scry (need only-in) - our now)
+    ^-  query:nectar
     :+  %select  (need only-in)
     =+  [%s %content %& %text-find (trip phrase)]
     ?~  only-author  -
     [%and [%s %author %& %eq u.only-author] -]
-  %+  turn
-    (nectar-scry (need only-in) jam our now)
   |=  =row:nectar
   [(need only-in) !<(message [-:!>(*message) row])]
 ::

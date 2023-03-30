@@ -81,8 +81,7 @@
       [%last-read [4 | %ud]]     ::  id of message we last saw
       [%router [5 | %p]]
       [%members [6 | %blob]]     ::  members and type of convo
-      [%deleted [7 | %f]]
-      [%muted [8 | %f]]
+      [%muted [7 | %f]]
   ==
 ::
 ++  conversations-indices
@@ -91,9 +90,9 @@
   ==
 ::
 ::  a groupchat id must be globally unique, so that tables can
-::  be synced by anyone. it is constructed by the +shax of
+::  be synced by anyone. it is constructed by the +sham of
 ::  the creator @p, time at creation, and the conversation's name.
-::  DM ids are made by +shax-ing the two @ps involved
+::  DM ids are made by +sham-ing the two @ps involved
 ::
 +$  conversation-id  @ux
 ::
@@ -107,7 +106,6 @@
       last-read=message-id
       router=@p
       meta=[%b p=conversation-metadata]
-      deleted=?
       muted=?
       ~
   ==
