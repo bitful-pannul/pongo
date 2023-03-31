@@ -41,10 +41,10 @@
 ++  on-peek   handle-scry:hc
 ::
 ++  on-init
-  ::  produce our conversations table
+  ::  produce our conversations+inbox table
   ::  this will fail if it already exists, and that's okay!
   ::  TODO create our stored procedures here!
-  :-  (init-tables our.bowl)
+  :-  (init-tables [our now]:bowl)
   this(state [%2 ['' '' %low]])
 ::
 ++  on-save  !>([state ping-sub ping-pub])
@@ -56,7 +56,12 @@
   ?:  =(%1 -.q.vase)  on-init
   =/  old  !<([state=state-2 sub=_ping-sub pub=_ping-pub] vase)
   ::  check to make sure nectar has conversations table, add if not
-  :-  (init-tables our.bowl)
+  =/  check=?
+    .^  ?  %gx
+      (scot %p our.bowl)  %nectar  (scot %da now.bowl)
+      /table-exists/pongo/conversations/noun
+    ==
+  :-  ?:(check ~ (init-tables [our now]:bowl))
   this(state state.old, ping-sub sub.old, ping-pub pub.old)
 ::
 ++  on-arvo
@@ -161,8 +166,25 @@
       %sss-on-rock
     ::  here's where we get messages as a non-router
     =/  msg  !<(from:da-ping (fled vase))
-    ?~  wave.msg  `this
-    (handle-ping `ping`u.wave.msg)
+    ?.  stale.msg
+      ?~  wave.msg  `this  ::  ignore non-waves
+      (handle-ping `ping`u.wave.msg)
+    ::  we were removed from a convo, delete it and stuff
+    =/  =conversation-id  -.+.-.msg
+    :_  this
+    :+  %+  ~(poke pass:io /leave-convo)
+          [our.bowl %nectar]
+        :-  %nectar-query
+        !>  ^-  query-poke:nectar
+        :-  %pongo
+        :+  %delete  %conversations
+        [%s %id %& %eq conversation-id]
+      %+  ~(poke pass:io /drop-convo)
+        [our.bowl %nectar]
+      :-  %nectar-query
+      !>  ^-  query-poke:nectar
+      [%pongo %drop-table conversation-id]
+    ~
   ::
       %sss-to-pub
     =/  msg  !<(into:du-ping (fled vase))
@@ -185,7 +207,8 @@
       ::  as router, set proper message ID
       ping(id.message +(last-message.convo))
     =^  router-cards  ping-pub
-      ?.  =(our.bowl router.convo)  `ping-pub
+      ::  do not forward *inbox* messages to anyone
+      ?:  |(=(%inbox id.convo) !=(our.bowl router.convo))  `ping-pub
       ::  we are the router; forward the ping to all participants
       ::  if a member is added or removed, add/remove them from
       ::  permissioned watchers on this chat's publication
@@ -200,7 +223,9 @@
         =+  (slav %p content.message.ping)
         ?-  kind.message.ping
           %member-add  (~(put in (fall s *(set @p))) -)
-          %member-remove  (~(del in (fall s *(set @p))) -)
+            %member-remove
+          ?<  =(- router.convo)
+          (~(del in (fall s *(set @p))) -)
         ==
       (give:du-ping [%ping id.convo ~] ping)
     ?-    -.ping
@@ -244,19 +269,9 @@
         ::
             %member-remove
           =+  them=(slav %p content.message)
+          ?:  =(them router.convo)  `convo
           =.  members.p.meta.convo
             (~(del in members.p.meta.convo) them)
-          ?:  =(our.bowl them)
-            ::  we were removed! delete convo, TODO quit wave
-            :_  convo
-            :~  %+  ~(poke pass:io /leave-convo)
-                  [our.bowl %nectar]
-                :-  %nectar-query
-                !>  ^-  query-poke:nectar
-                :-  %pongo
-                :+  %delete  %conversations
-                [%s %id %& %eq id.convo]
-            ==
           `convo
         ::
             %change-name
@@ -302,46 +317,31 @@
         ==
       router-cards
     ::
-        %edit
-      ::  apply an edit to a message
-      =/  edit-hash  (make-reaction-edit-hash [edit on]:ping)
-      ~|  "pongo: received invalid signature on message edit"
-      ?>  (validate:sig our.bowl sig.ping edit-hash now.bowl)
+        ?(%edit %react)
+      ::  apply an edit or reaction to a message
+      =/  hash  (make-reaction-edit-hash [|4 -:|3]:ping)
+      ~|  "pongo: received invalid signature on message edit/react"
+      ?>  (validate:sig our.bowl sig.ping hash now.bowl)
+      =/  m=(unit message)
+        =-  ?~(- ~ `!<(message [-:!>(*message) i.-]))
+        =-  (nectar-scry id.convo - [our now]:bowl)
+        :+  %select  id.convo
+        ?:  ?=(%react -.ping)
+          [%s %id %& %eq on.ping]
+        [%and [%s %id %& %eq on.ping] [%s %author %& %eq q.sig.ping]]
+      ?~  m  `this
+      =.  u.m
+        ?:  ?=(%edit -.ping)
+          u.m(content edit.ping, edited %.y)
+        u.m(p.reactions (~(put by p.reactions.u.m) q.sig.ping reaction.ping))
       :_  this
-      :_  router-cards
-      %+  ~(poke pass:io /insert)
-        [our.bowl %nectar]
-      :-  %nectar-query
-      !>  ^-  query-poke:nectar
-      :-  %pongo
-      :^  %update  id.convo
-        :+  %and  [%s %id %& %eq on.ping]
-        :+  %and  [%s %author %& %eq q.sig.ping]
-        [%s %kind %& %eq %text]
-      :~  [%content |=(value:nectar edit.ping)]
-          [%edited |=(value:nectar %.y)]
-      ==
-    ::
-        %react
-      ::  apply a reaction to a message
-      =/  reaction-hash  (make-reaction-edit-hash [reaction on]:ping)
-      ~|  "pongo: received invalid signature on message reaction"
-      ?>  (validate:sig our.bowl sig.ping reaction-hash now.bowl)
-      :_  this
-      :_  router-cards
-      %+  ~(poke pass:io /insert)
-        [our.bowl %nectar]
-      :-  %nectar-query
-      !>  ^-  query-poke:nectar
-      :-  %pongo
-      :^  %update  id.convo
-        [%s %id %& %eq on.ping]
-      :_  ~
-      :-  %reactions
-      |=  v=value:nectar
-      ^-  value:nectar
-      ?>  &(?=(^ v) ?=(%m -.v))
-      m+(~(put by p.v) src.bowl reaction.ping)
+      :+   (give-update [%message id.convo u.m])
+        %+  ~(poke pass:io /insert)
+          [our.bowl %nectar]
+        :-  %nectar-query
+        !>  ^-  query-poke:nectar
+        pongo+[%update-rows id.convo ~[u.m]]
+      router-cards
     ==
   ::
   ++  handle-action
@@ -434,6 +434,8 @@
             pongo+[%update-rows %conversations ~[convo(deleted %.y)]]
         ==
       ::  for groupchats, tell everyone you're leaving
+      ::  TODO if you are the router, assign a new router as you leave.
+      ?:  =(our.bowl router.convo)  !!
       :~  %+  ~(poke pass:io /send-member-remove)
             [our.bowl %pongo]
           =-  pongo-action+!>(`^action`[%send-message -])

@@ -5,8 +5,8 @@
   |=  [table=@ =query:nectar our=@p now=@da]
   ^-  (list row:nectar)
   .^  (list row:nectar)  %gx
-    %+  weld  /(scot %p our)/nectar/(scot %da now)/jammed-query
-    /pongo/[table]/(jam query)/noun
+    (scot %p our)  %nectar  (scot %da now)
+    /jammed-query/pongo/[table]/(jam query)/noun
   ==
 ::
 ++  give-update
@@ -17,18 +17,37 @@
   (fact:io pongo-update+!>(upd) ~[/updates])
 ::
 ++  init-tables
-  |=  our=@p
+  |=  [our=@p now=@da]
   ^-  (list card:agent:gall)
-  ::  TODO add hardcoded %inbox messages table here
-  :_  ~
-  %+  ~(poke pass:io /make-table)  [our %nectar]
-  :-  %nectar-query
-  !>  ^-  query-poke:nectar
-  :^  %pongo  %add-table  %conversations
-  ^-  table:nectar
-  :^    (make-schema:nectar conversations-schema)
-      primary-key=~[%id]
-    (make-indices:nectar conversations-indices)
+  %+  welp  (make-messages-table %inbox our)
+  :^    %+  ~(poke pass:io /make-table)  [our %nectar]
+        :-  %nectar-query
+        !>  ^-  query-poke:nectar
+        :^  %pongo  %add-table  %conversations
+        ^-  table:nectar
+        :^    (make-schema:nectar conversations-schema)
+            primary-key=~[%id]
+          (make-indices:nectar conversations-indices)
+        ~
+      %+  ~(poke pass:io /make-inbox)  [our %nectar]
+      :-  %nectar-query
+      !>  ^-  query-poke:nectar
+      :^  %pongo  %insert  %conversations
+      :_  ~
+      :*  `@ux`%inbox
+          'Inbox'
+          last-active=now
+          last-message=0
+          last-read=0
+          router=our
+          [%b [%inbox [our ~ ~] ~]]
+          [%.n %.n ~]
+      ==
+    ::  welcome to pongo message!
+    %+  ~(poke pass:io /make-welcome-message)
+      [our %pongo]
+    =-  pongo-action+!>(`action`[%send-message -])
+    ['' `@ux`%inbox %text 'Welcome to Pongo!' ~ ~]
   ~
 ::
 ++  make-messages-table
@@ -58,6 +77,9 @@
 ++  valid-message-contents
   |=  [=message convo=conversation]
   ^-  ?
+  ?:  ?=(%inbox -.p.meta.convo)
+    ::  these three message types are only ones allowed in inbox
+    ?=(?(%text %send-tokens %app-link) kind.message)
   ?+    kind.message  %.y
       %member-remove
     ?:  =(author.message (slav %p content.message))  %.y
@@ -249,8 +271,7 @@
         ['dm' b+?=(%dm -.p.meta.c)]
         ['members' a+(turn ~(tap in members.p.meta.c) ship)]
         :-  'leaders'
-        ?-  -.p.meta.c
-          ?(%open %dm)  ~
+        ?+  -.p.meta.c  ~
           %managed      a+(turn ~(tap in leaders.p.meta.c) ship)
         ==
         ['muted' b+muted.c]

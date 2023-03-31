@@ -117,6 +117,7 @@
   $%  [%managed members=(set @p) leaders=(set @p)]
       [%open members=(set @p) ~]  ::  hate this ~
       [%dm members=(set @p) ~]
+      [%inbox members=(set @p) ~]  ::  only ever contains us
   ==
 ::
 ::  all messaging is done through pings.
