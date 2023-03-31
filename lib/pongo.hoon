@@ -1,5 +1,5 @@
 /-  *pongo, nectar
-/+  sig
+/+  sig, io=agentio
 |%
 ++  nectar-scry
   |=  [table=@ =query:nectar our=@p now=@da]
@@ -7,6 +7,88 @@
   .^  (list row:nectar)  %gx
     %+  weld  /(scot %p our)/nectar/(scot %da now)/jammed-query
     /pongo/[table]/(jam query)/noun
+  ==
+::
+++  give-update
+  |=  upd=pongo-update
+  ^-  card:agent:gall
+  ::  ~&  >>  "giving fact to frontend: "
+  ::  ~&  >>  (crip (en-json:html (update-to-json:parsing upd)))
+  (fact:io pongo-update+!>(upd) ~[/updates])
+::
+++  init-tables
+  |=  our=@p
+  ^-  (list card:agent:gall)
+  ::  TODO add hardcoded %inbox messages table here
+  :_  ~
+  %+  ~(poke pass:io /make-table)  [our %nectar]
+  :-  %nectar-query
+  !>  ^-  query-poke:nectar
+  :^  %pongo  %add-table  %conversations
+  ^-  table:nectar
+  :^    (make-schema:nectar conversations-schema)
+      primary-key=~[%id]
+    (make-indices:nectar conversations-indices)
+  ~
+::
+++  make-messages-table
+  |=  [id=@ our=@p]
+  ^-  (list card:agent:gall)
+  :+  %+  ~(poke pass:io /make-table)
+        [our %nectar]
+      :-  %nectar-query
+      !>  ^-  query-poke:nectar
+      :-  %pongo
+      :+  %add-table  id
+      :^    (make-schema:nectar messages-schema)
+          primary-key=~[%id]
+        (make-indices:nectar messages-indices)
+      ~
+    %+  ~(poke pass:io /make-private)
+      [our %nectar]
+    :-  %nectar-set-perms
+    !>  ^-  set-perms:nectar
+    [%pongo id]^[%private ~]
+  ~
+::
+::  +valid-message-contents: verify that messages which adjust the
+::  "leadership structure" of the groupchat are performed by those
+::  with the privilege to do so.
+::
+++  valid-message-contents
+  |=  [=message convo=conversation]
+  ^-  ?
+  ?+    kind.message  %.y
+      %member-remove
+    ?:  =(author.message (slav %p content.message))  %.y
+    ?-  -.p.meta.convo
+      ?(%open %dm)  %.n
+      %managed      (~(has in leaders.p.meta.convo) author.message)
+    ==
+  ::
+      ?(%member-add %change-name)
+    ?-  -.p.meta.convo
+      ?(%open %dm)  %.y  ::  this is right, sadly
+      %managed      (~(has in leaders.p.meta.convo) author.message)
+    ==
+  ::
+      %leader-add
+    ?-  -.p.meta.convo
+      ?(%open %dm)  %.n
+      %managed      (~(has in leaders.p.meta.convo) author.message)
+    ==
+  ::
+      %leader-remove
+    ?-  -.p.meta.convo
+      ?(%open %dm)  %.n
+        %managed
+      ?&  (gte ~(wyt in leaders.p.meta.convo) 2)
+          (~(has in leaders.p.meta.convo) author.message)
+      ==
+    ==
+  ::
+      %change-router
+    !!  ::  TBD
   ==
 ::
 ++  give-push-notification
@@ -230,32 +312,6 @@
       %+  turn  +.upd
       |=  [c=conversation-id =message]
       (message-to-json:parsing message `c)
-    ::
-        %invites
-      %+  frond  'invites'
-      %-  pairs
-      :~  :-  'sent'
-          ^-  json
-          %-  pairs
-          %+  turn  ~(tap by sent.upd)
-          |=  [k=conversation-id s=(set @p)]
-          [(scot %ux k) a+(turn ~(tap in s) ship)]
-      ::
-          :-  'received'
-          ^-  json
-          %-  pairs
-          %+  turn  ~(tap by rec.upd)
-          |=  [k=conversation-id v=[from=@p c=conversation]]
-          :-  (scot %ux k)
-          %-  pairs
-          :~  ['from' (ship from.v)]
-              ['conversation' (conversation-to-json c.v)]
-          ==
-      ==
-    ::
-        %blocklist
-      %+  frond  'blocklist'
-      a+(turn ~(tap in +.upd) ship)
     ::
         %notification
       %+  frond  'notification'

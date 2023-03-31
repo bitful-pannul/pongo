@@ -66,7 +66,7 @@
       ::  special bespoke message types
       %poll         ::  content is "question being asked \n
                     ::  first response \n second response \n ..."
-      %send-tokens  ::  content is a (scot %ux transaction-hash)
+      %send-tokens  ::  content is a (scot %ux transaction-hash) (TODO)
       %app-link     ::  content is @t link (everything after ship URL)
   ==
 ::
@@ -130,10 +130,7 @@
 ::
 ::  entry pokes handle creating and joining conversations.
 ::
-+$  entry
-  $%  [%invite =conversation]            ::  person creating the invite sends
-      [%accept-invite =conversation-id]  ::  %member-add message upon accept
-  ==
++$  entry  [%invite =conversation]  ::  router sends this
 ::
 ::  pokes that our frontend performs:
 ::
@@ -191,11 +188,6 @@
       [%sending =conversation-id identifier=@t]
       [%delivered =conversation-id identifier=@t =message-id]
       [%search-result (list [=conversation-id =message])]
-      $:  %invites
-          sent=(jug conversation-id @p)
-          rec=(map conversation-id [from=@p =conversation])
-      ==
-      [%blocklist (set @p)]
       [%notification convo-name=@t author=@p content=@t]
       [%notif-settings notif-settings]
   ==
@@ -203,7 +195,7 @@
 +$  thread-update
   $%  [%denied from=@p]
       [%shared from=@p address=@ux]
-      [%finished sequencer-receipt:uqbar]
+      [%finished hash=@ux sequencer-receipt:uqbar]
   ==
 ::
 +$  conversation-info

@@ -4,24 +4,22 @@
 =>
 |%
 ++  take-update
-  =/  m  (strand ,@ux)
+  =/  m  (strand ,(unit @ux))
   ^-  form:m
   ;<  =cage  bind:m  (take-fact /thread-watch)
   =/  upd=thread-update:pongo  !<(thread-update:pongo q.cage)
   ?.  ?=(%shared -.upd)
-    ::  failed  ! surface this somehow
-    !!
-  (pure:m address.upd)
+    (pure:m ~)
+  (pure:m `address.upd)
 ::
 ++  take-receipt
-  =/  m  (strand ,sequencer-receipt:uqbar)
+  =/  m  (strand ,(unit [hash=@ux sequencer-receipt:uqbar]))
   ^-  form:m
   ;<  =cage  bind:m  (take-fact /thread-watch)
   =/  upd=thread-update:pongo  !<(thread-update:pongo q.cage)
   ?.  ?=(%finished -.upd)
-    ::  failed  ! surface this somehow
-    !!
-  (pure:m +.upd)
+    (pure:m ~)
+  (pure:m `+.upd)
 ::
 ++  take-asset-metadata
   |=  [from=@ux item=@ux]
@@ -72,8 +70,10 @@
   ==
 ::  take fact from pongo with result of poke
 ::
-;<  address=@ux  bind:m  take-update
+;<  address=(unit @ux)  bind:m  take-update
 ;<  our=@p       bind:m  get-our
+::  if address is ~, surface error (user didn't share wallet addr)
+?~  address  !!
 ::  poke wallet to approve origin so we don't have to sign
 ::
 ;<  ~  bind:m
@@ -96,12 +96,22 @@
           from.act
           contract.act
           town.act
-          [%give address amount.act item.act]
+          [%give u.address amount.act item.act]
       ==
   ==
 ::  take receipt fact once txn is completed
 ::
-;<  =sequencer-receipt:uqbar  bind:m  take-receipt
+;<  res=(unit [hash=@ux =sequencer-receipt:uqbar])  bind:m  take-receipt
+?~  res  !!
+::  forward the receipt to the wallet of the ship we sent to
+::
+;<  ~  bind:m
+  %-  send-raw-card
+  :*  %pass   /forward-receipt
+      %agent  [to.act %uqbar]
+      %poke   %uqbar-write
+      !>(`write:uqbar`[%receipt u.res])
+  ==
 ::  get wallet metadata to show what token we sent
 ::
 ;<  metadata=@ux  bind:m  (take-asset-metadata [from item]:act)
