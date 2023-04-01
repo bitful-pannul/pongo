@@ -127,7 +127,6 @@
       =<  q
       %^  spin  messages-tables  ping-pub
       |=  [[id=@ux mt=table:nectar] =_ping-pub]
-      ~&  >  ping-pub
       =/  convo=conversation  (~(got by convos) id)
       :-  [id mt]
       ?.  =(our.bowl router.convo)

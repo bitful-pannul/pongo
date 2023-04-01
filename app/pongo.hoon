@@ -60,16 +60,13 @@
   =/  old  !<([state=state-2 sub=_ping-sub pub=_ping-pub] vase)
   ::  TODO re-evaluate whether this is desirable to have here:
   ::  for every convo that we don't route for, re-sub to router
-  ::  asdf
-  ~&  >  sub.old
   =/  [cards=(list card) sub=_ping-sub]
     (~(part-two transition:st bowl) sub.old)
-  ~&  >  sub
-  ::  check to make sure nectar has conversations table, add if not
+  ::  check to make sure nectar has inbox table, add if not
   =/  check=?
     .^  ?  %gx
       (scot %p our.bowl)  %nectar  (scot %da now.bowl)
-      /table-exists/pongo/conversations/noun
+      /table-exists/pongo/inbox/noun
     ==
   :-  ?:  check  cards
       (weld cards (init-tables [our now]:bowl))
@@ -211,7 +208,6 @@
     ^-  (quip card _this)
     ?~  conv=(fetch-conversation:hc -.+.ping)
       ~|("pongo: can't find conversation {<-.+.ping>}" !!)
-    ~&  >>  "got ping"
     =*  convo  u.conv
     =?    ping
         &(?=(%message -.ping) =(our.bowl router.convo))
@@ -546,7 +542,6 @@
       =*  convo  conversation.action
       =^  surf-cards  ping-sub
         (surf:da-ping router.convo %pongo [%ping id.convo ~])
-      ~&  >>>  ping-sub
       :_  this
       %+  welp  surf-cards
       :_  (make-messages-table:hc id.convo our.bowl)
