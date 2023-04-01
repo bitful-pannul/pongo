@@ -54,19 +54,26 @@
   ^-  (quip card _this)
   ?:  =(%0 -.q.vase)  on-init
   ?:  =(%1 -.q.vase)
-    =/  [cards=(list card) new=state-2 sub=_ping-sub pub=_ping-pub]
-      (~(do transition:st bowl) !<(state-1:st vase))
-    :-  cards
-    this(state new, ping-sub sub, ping-pub pub)
+    =/  [cards=(list card) new=state-2 pub=_ping-pub]
+      (~(part-one transition:st bowl) !<(state-1:st vase))
+    [cards this(state new, ping-pub pub)]
   =/  old  !<([state=state-2 sub=_ping-sub pub=_ping-pub] vase)
+  ::  TODO re-evaluate whether this is desirable to have here:
+  ::  for every convo that we don't route for, re-sub to router
+  ::  asdf
+  ~&  >  sub.old
+  =/  [cards=(list card) sub=_ping-sub]
+    (~(part-two transition:st bowl) sub.old)
+  ~&  >  sub
   ::  check to make sure nectar has conversations table, add if not
   =/  check=?
     .^  ?  %gx
       (scot %p our.bowl)  %nectar  (scot %da now.bowl)
       /table-exists/pongo/conversations/noun
     ==
-  :-  ?:(check ~ (init-tables [our now]:bowl))
-  this(state state.old, ping-sub sub.old, ping-pub pub.old)
+  :-  ?:  check  cards
+      (weld cards (init-tables [our now]:bowl))
+  this(state state.old, ping-sub sub, ping-pub pub.old)
 ::
 ++  on-arvo
   |=  [=wire sign=sign-arvo]

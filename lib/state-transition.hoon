@@ -52,7 +52,7 @@
   =/  ping-sub  (mk-subs pongo-pings ,[%ping @ ~])
   =/  ping-pub  (mk-pubs pongo-pings ,[%ping @ ~])
   |_  =bowl:gall
-  ++  do
+  ++  part-one
     |=  old=state-1
     ::  what do we have to do here?
     ::  1. move conversation table into %nectar
@@ -121,7 +121,6 @@
     =/  state-2
       [%2 notif-settings.old]
     ::
-    =/  da  (da pongo-pings ,[%ping @ ~])
     =/  du  (du pongo-pings ,[%ping @ ~])
     ::
     =.  ping-pub
@@ -142,19 +141,30 @@
         path^~
       |=((unit (set @p)) `members.p.meta.convo)
     ::
-    =^  surf-cards=(list card:agent:gall)  ping-sub
-      =-  [(zing p.-) q.-]
-      %^  spin  messages-tables  ping-sub
-      |=  [[id=@ux mt=table:nectar] =_ping-sub]
-      ^-  [(list card:agent:gall) _ping-sub]
-      =/  convo=conversation  (~(got by convos) id)
-      ?:  =(our.bowl router.convo)
-        [~ ping-sub]
-      %:  surf:(da ping-sub bowl -:!>(*result:da) -:!>(*from:da) -:!>(*fail:da))
-          router.convo %pongo  [%ping id ~]
-      ==
+    [nectar-cards [state-2 ping-pub]]
+  ::
+  ++  part-two
+    |=  =_ping-sub
+    ^-  (quip card:agent:gall _ping-sub)
+    =/  da  (da pongo-pings ,[%ping @ ~])
+    ::  for every conversation we have, if we are not the router,
+    ::  sub to the router!
+    =/  convos=(list conversation)
+      %+  turn
+        %^  nectar-scry  %conversations
+          [%select %conversations %n ~]
+        [our now]:bowl
+      |=  =row:nectar
+      !<(conversation [-:!>(*conversation) row])
     ::
-    :_  [state-2 ping-sub ping-pub]
-    (weld surf-cards nectar-cards)
+    =-  [(zing p.-) q.-]
+    %^  spin  convos  ping-sub
+    |=  [convo=conversation =_ping-sub]
+    ^-  [(list card:agent:gall) _ping-sub]
+    ?:  =(our.bowl router.convo)
+      [~ ping-sub]
+    %:  surf:(da ping-sub bowl -:!>(*result:da) -:!>(*from:da) -:!>(*fail:da))
+        router.convo  %pongo  [%ping id.convo ~]
+    ==
   --
 --
