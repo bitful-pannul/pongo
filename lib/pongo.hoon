@@ -20,15 +20,22 @@
   |=  [our=@p now=@da]
   ^-  (list card:agent:gall)
   %+  welp  (make-messages-table %inbox our)
-  :^    %+  ~(poke pass:io /make-table)  [our %nectar]
-        :-  %nectar-query
-        !>  ^-  query-poke:nectar
-        :^  %pongo  %add-table  %conversations
-        ^-  table:nectar
-        :^    (make-schema:nectar conversations-schema)
-            primary-key=~[%id]
-          (make-indices:nectar conversations-indices)
-        ~
+  :~  %+  ~(poke pass:io /make-table)  [our %nectar]
+      :-  %nectar-query
+      !>  ^-  query-poke:nectar
+      :^  %pongo  %add-table  %conversations
+      ^-  table:nectar
+      :^    (make-schema:nectar conversations-schema)
+          primary-key=~[%id]
+        (make-indices:nectar conversations-indices)
+      ~
+  ::
+      %+  ~(poke pass:io /make-private)
+        [our %nectar]
+      :-  %nectar-set-perms
+      !>  ^-  set-perms:nectar
+      [%pongo %conversations]^[%private ~]
+  ::
       %+  ~(poke pass:io /make-inbox)  [our %nectar]
       :-  %nectar-query
       !>  ^-  query-poke:nectar
@@ -43,12 +50,12 @@
           [%b [%inbox [our ~ ~] ~]]
           [%.n %.n ~]
       ==
-    ::  welcome to pongo message!
-    %+  ~(poke pass:io /make-welcome-message)
-      [our %pongo]
-    =-  pongo-action+!>(`action`[%send-message -])
-    ['' `@ux`%inbox %text 'Welcome to Pongo!' ~ ~]
-  ~
+  ::  welcome to pongo message!
+      %+  ~(poke pass:io /make-welcome-message)
+        [our %pongo]
+      =-  pongo-action+!>(`action`[%send-message -])
+      ['' `@ux`%inbox %text 'Welcome to Pongo!' ~ ~]
+  ==
 ::
 ++  make-messages-table
   |=  [id=@ our=@p]

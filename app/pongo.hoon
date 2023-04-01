@@ -1,7 +1,7 @@
 /-  *pongo, uqbar=zig-uqbar, wallet=zig-wallet,
     nectar, pongo-pings
 /+  verb, dbug, default-agent, io=agentio,
-    *pongo, *sss, sig
+    *pongo, *sss, sig, st=state-transition
 |%
 ::  arbitrary limit for some measure of performance guarantees
 ++  message-length-limit  1.024
@@ -53,16 +53,24 @@
   |=  =vase
   ^-  (quip card _this)
   ?:  =(%0 -.q.vase)  on-init
-  ?:  =(%1 -.q.vase)  on-init
+  ?:  =(%1 -.q.vase)
+    =/  [cards=(list card) new=state-2 pub=_ping-pub]
+      (~(part-one transition:st bowl) !<(state-1:st vase))
+    [cards this(state new, ping-pub pub)]
   =/  old  !<([state=state-2 sub=_ping-sub pub=_ping-pub] vase)
-  ::  check to make sure nectar has conversations table, add if not
+  ::  TODO re-evaluate whether this is desirable to have here:
+  ::  for every convo that we don't route for, re-sub to router
+  =/  [cards=(list card) sub=_ping-sub]
+    (~(part-two transition:st bowl) sub.old)
+  ::  check to make sure nectar has inbox table, add if not
   =/  check=?
     .^  ?  %gx
       (scot %p our.bowl)  %nectar  (scot %da now.bowl)
-      /table-exists/pongo/conversations/noun
+      /table-exists/pongo/inbox/noun
     ==
-  :-  ?:(check ~ (init-tables [our now]:bowl))
-  this(state state.old, ping-sub sub.old, ping-pub pub.old)
+  :-  ?:  check  cards
+      (weld cards (init-tables [our now]:bowl))
+  this(state state.old, ping-sub sub, ping-pub pub.old)
 ::
 ++  on-arvo
   |=  [=wire sign=sign-arvo]
@@ -200,7 +208,6 @@
     ^-  (quip card _this)
     ?~  conv=(fetch-conversation:hc -.+.ping)
       ~|("pongo: can't find conversation {<-.+.ping>}" !!)
-    ~&  >>  "got ping"
     =*  convo  u.conv
     =?    ping
         &(?=(%message -.ping) =(our.bowl router.convo))
@@ -535,7 +542,6 @@
       =*  convo  conversation.action
       =^  surf-cards  ping-sub
         (surf:da-ping router.convo %pongo [%ping id.convo ~])
-      ~&  >>>  ping-sub
       :_  this
       %+  welp  surf-cards
       :_  (make-messages-table:hc id.convo our.bowl)
@@ -744,7 +750,6 @@
   =/  rows=(list row:nectar)
     =+  [%select %conversations where=[%n ~]]
     (nectar-scry %conversations - [our now]:bowl)
-  ::  TODO see why this gives wrong answer sometimes
   %+  roll  rows
   |=  [=row:nectar i=@ud]
   =+  !<(conversation [-:!>(*conversation) row])
