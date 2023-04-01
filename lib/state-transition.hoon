@@ -52,13 +52,6 @@
   =/  ping-sub  (mk-subs pongo-pings ,[%ping @ ~])
   =/  ping-pub  (mk-pubs pongo-pings ,[%ping @ ~])
   |_  =bowl:gall
-  +*  this  .
-      da-ping
-        =/  da  (da pongo-pings ,[%ping @ ~])
-        (da ping-sub bowl -:!>(*result:da) -:!>(*from:da) -:!>(*fail:da))
-      du-ping
-        =/  du  (du pongo-pings ,[%ping @ ~])
-        (du ping-pub bowl -:!>(*result:du))
   ++  do
     |=  old=state-1
     ::  what do we have to do here?
@@ -128,6 +121,7 @@
     =/  state-2
       [%2 notif-settings.old]
     ::
+    =/  da  (da pongo-pings ,[%ping @ ~])
     =/  du  (du pongo-pings ,[%ping @ ~])
     ::
     =.  ping-pub
@@ -140,7 +134,8 @@
       ?.  =(our.bowl router.convo)
         ping-pub
       =/  path  [%ping id ~]
-      =.  ping-pub  +:(give:du-ping path *ping)
+      =.  ping-pub
+        +:(give:(du ping-pub bowl -:!>(*result:du)) path *ping)
       =.  ping-pub
         (rule:(du ping-pub bowl -:!>(*result:du)) path [0 1])
       %+  perm:(du ping-pub bowl -:!>(*result:du))
@@ -155,7 +150,9 @@
       =/  convo=conversation  (~(got by convos) id)
       ?:  =(our.bowl router.convo)
         [~ ping-sub]
-      (surf:da-ping router.convo %pongo [%ping id ~])
+      %:  surf:(da ping-sub bowl -:!>(*result:da) -:!>(*from:da) -:!>(*fail:da))
+          router.convo %pongo  [%ping id ~]
+      ==
     ::
     :_  [state-2 ping-sub ping-pub]
     (weld surf-cards nectar-cards)
