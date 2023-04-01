@@ -87,9 +87,7 @@
   ==
 ::
 ++  conversations-indices
-  :~  [~[%id] primary=& autoincrement=~ unique=& clustered=|]
-      [~[%last-active] primary=| autoincrement=~ unique=| clustered=&]
-  ==
+  [~[%id] primary=& autoincrement=~ unique=& clustered=|]^~
 ::
 ::  a groupchat id must be globally unique, so that tables can
 ::  be synced by anyone. it is constructed by the +sham of

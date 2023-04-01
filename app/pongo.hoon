@@ -1,7 +1,7 @@
 /-  *pongo, uqbar=zig-uqbar, wallet=zig-wallet,
     nectar, pongo-pings
 /+  verb, dbug, default-agent, io=agentio,
-    *pongo, *sss, sig
+    *pongo, *sss, sig, st=state-transition
 |%
 ::  arbitrary limit for some measure of performance guarantees
 ++  message-length-limit  1.024
@@ -53,7 +53,11 @@
   |=  =vase
   ^-  (quip card _this)
   ?:  =(%0 -.q.vase)  on-init
-  ?:  =(%1 -.q.vase)  on-init
+  ?:  =(%1 -.q.vase)
+    =/  [cards=(list card) new=state-2 sub=_ping-sub pub=_ping-pub]
+      (~(do transition:st bowl) !<(state-1:st vase))
+    :-  cards
+    this(state new, ping-sub sub, ping-pub pub)
   =/  old  !<([state=state-2 sub=_ping-sub pub=_ping-pub] vase)
   ::  check to make sure nectar has conversations table, add if not
   =/  check=?
@@ -744,7 +748,6 @@
   =/  rows=(list row:nectar)
     =+  [%select %conversations where=[%n ~]]
     (nectar-scry %conversations - [our now]:bowl)
-  ::  TODO see why this gives wrong answer sometimes
   %+  roll  rows
   |=  [=row:nectar i=@ud]
   =+  !<(conversation [-:!>(*conversation) row])
