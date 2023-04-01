@@ -4,11 +4,14 @@
 =>
 |%
 ++  take-update
+  |=  to=@p
   =/  m  (strand ,(unit @ux))
   ^-  form:m
   ;<  =cage  bind:m  (take-fact /thread-watch)
   =/  upd=thread-update:pongo  !<(thread-update:pongo q.cage)
-  ?.  ?=(%shared -.upd)
+  ?.  ?&  ?=(%shared -.upd)
+          =(to from.upd)
+      ==
     (pure:m ~)
   (pure:m `address.upd)
 ::
@@ -68,12 +71,18 @@
       %agent  [to.act %wallet]
       %poke   uqbar-share-address+!>([%request %pongo])
   ==
+::  set timer so that if we don't hear back from ship in 2 minutes,
+::  we cancel the token send
+;<  now=@da  bind:m  get-time
 ::  take fact from pongo with result of poke
 ::
-;<  address=(unit @ux)  bind:m  take-update
-;<  our=@p       bind:m  get-our
+;<  address=(unit @ux)  bind:m  (take-update to.act)
+;<  our=@p  bind:m  get-our
 ::  if address is ~, surface error (user didn't share wallet addr)
 ?~  address  !!
+::  if it's too late, don't send anymore
+;<  later=@da  bind:m  get-time
+?:  (gth (sub later now) ~m5)  !!
 ::  poke wallet to approve origin so we don't have to sign
 ::
 ;<  ~  bind:m
