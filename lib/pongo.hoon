@@ -1,6 +1,125 @@
-/-  *pongo
-/+  sig, n=nectar
+/-  *pongo, nectar
+/+  sig, io=agentio
 |%
+++  nectar-scry
+  |=  [table=@ =query:nectar our=@p now=@da]
+  ^-  (list row:nectar)
+  .^  (list row:nectar)  %gx
+    (scot %p our)  %nectar  (scot %da now)
+    /jammed-query/pongo/[table]/(jam query)/noun
+  ==
+::
+++  give-update
+  |=  upd=pongo-update
+  ^-  card:agent:gall
+  ::  ~&  >>  "giving fact to frontend: "
+  ::  ~&  >>  (crip (en-json:html (update-to-json:parsing upd)))
+  (fact:io pongo-update+!>(upd) ~[/updates])
+::
+++  init-tables
+  |=  [our=@p now=@da]
+  ^-  (list card:agent:gall)
+  %+  welp  (make-messages-table %inbox our)
+  :~  %+  ~(poke pass:io /make-table)  [our %nectar]
+      :-  %nectar-query
+      !>  ^-  query-poke:nectar
+      :^  %pongo  %add-table  %conversations
+      ^-  table:nectar
+      :^    (make-schema:nectar conversations-schema)
+          primary-key=~[%id]
+        (make-indices:nectar conversations-indices)
+      ~
+  ::
+      %+  ~(poke pass:io /make-private)
+        [our %nectar]
+      :-  %nectar-set-perms
+      !>  ^-  set-perms:nectar
+      [%pongo %conversations]^[%private ~]
+  ::
+      %+  ~(poke pass:io /make-inbox)  [our %nectar]
+      :-  %nectar-query
+      !>  ^-  query-poke:nectar
+      :^  %pongo  %insert  %conversations
+      :_  ~
+      :*  `@ux`%inbox
+          'Inbox'
+          last-active=now
+          last-message=0
+          last-read=0
+          router=our
+          [%b [%inbox [our ~ ~] ~]]
+          [%.n %.n ~]
+      ==
+  ::  welcome to pongo message!
+      %+  ~(poke pass:io /make-welcome-message)
+        [our %pongo]
+      =-  pongo-action+!>(`action`[%send-message -])
+      ['' `@ux`%inbox %text 'Welcome to Pongo!' ~ ~]
+  ==
+::
+++  make-messages-table
+  |=  [id=@ our=@p]
+  ^-  (list card:agent:gall)
+  :+  %+  ~(poke pass:io /make-table)
+        [our %nectar]
+      :-  %nectar-query
+      !>  ^-  query-poke:nectar
+      :-  %pongo
+      :+  %add-table  id
+      :^    (make-schema:nectar messages-schema)
+          primary-key=~[%id]
+        (make-indices:nectar messages-indices)
+      ~
+    %+  ~(poke pass:io /make-private)
+      [our %nectar]
+    :-  %nectar-set-perms
+    !>  ^-  set-perms:nectar
+    [%pongo id]^[%private ~]
+  ~
+::
+::  +valid-message-contents: verify that messages which adjust the
+::  "leadership structure" of the groupchat are performed by those
+::  with the privilege to do so.
+::
+++  valid-message-contents
+  |=  [=message convo=conversation]
+  ^-  ?
+  ?:  ?=(%inbox -.p.meta.convo)
+    ::  these three message types are only ones allowed in inbox
+    ?=(?(%text %send-tokens %app-link) kind.message)
+  ?+    kind.message  %.y
+      %member-remove
+    ?:  =(author.message (slav %p content.message))  %.y
+    ?-  -.p.meta.convo
+      ?(%open %dm)  %.n
+      %managed      (~(has in leaders.p.meta.convo) author.message)
+    ==
+  ::
+      ?(%member-add %change-name)
+    ?-  -.p.meta.convo
+      ?(%open %dm)  %.y  ::  this is right, sadly
+      %managed      (~(has in leaders.p.meta.convo) author.message)
+    ==
+  ::
+      %leader-add
+    ?-  -.p.meta.convo
+      ?(%open %dm)  %.n
+      %managed      (~(has in leaders.p.meta.convo) author.message)
+    ==
+  ::
+      %leader-remove
+    ?-  -.p.meta.convo
+      ?(%open %dm)  %.n
+        %managed
+      ?&  (gte ~(wyt in leaders.p.meta.convo) 2)
+          (~(has in leaders.p.meta.convo) author.message)
+      ==
+    ==
+  ::
+      %change-router
+    !!  ::  TBD
+  ==
+::
 ++  give-push-notification
   |=  [unreads=@ud =conversation =message =notif-settings our=ship now=@da]
   ^-  (unit card:agent:gall)
@@ -67,22 +186,23 @@
 ::
 ::  type used for search threads
 +$  search
-  $:  =database:n
-      only-in=(unit conversation-id)
+  $:  only-in=(unit conversation-id)
       only-author=(unit @p)
       phrase=@t
   ==
 ::
 ++  do-search
-  |=  search
+  |=  [search our=@p now=@da]
   ^-  (list [conversation-id message])
   ::  TODO handle searches across all conversations
   %+  turn
-    =-  -:(~(q db:n database) %pongo [%select (need only-in) where=-])
+    =-  (nectar-scry (need only-in) - our now)
+    ^-  query:nectar
+    :+  %select  (need only-in)
     =+  [%s %content %& %text-find (trip phrase)]
     ?~  only-author  -
     [%and [%s %author %& %eq u.only-author] -]
-  |=  =row:n
+  |=  =row:nectar
   [(need only-in) !<(message [-:!>(*message) row])]
 ::
 ::  utils
@@ -100,69 +220,16 @@
       content
   ==
 ::
-++  make-reaction-hash
+++  make-reaction-edit-hash
   |=  [=reaction on=message-id]
   ^-  @
   %-  sham
   %+  rap  3
-  :~  'signed-pongo-react: '
+  :~  'signed-pongo-react-edit: '
       reaction
       'on message '
       (scot %ud on)
   ==
-::
-++  print-message
-  |=  =message
-  ^-  @t
-  ?+    kind.message
-      %+  rap  3
-      :~  'Message ('
-          (scot %ud id.message)
-          ') from '
-          (scot %p author.message)
-          ': '
-          content.message
-      ==
-  ::
-      %member-add
-    %^  cat  3
-      content.message
-    ' joined the conversation.'
-  ::
-      %member-remove
-    %^  cat  3
-      content.message
-    ' left the conversation.'
-  ::
-      %change-name
-    %^  cat  3
-      'Conversation name changed to '
-    (cat 3 content.message '.')
-  ::
-      %leader-add
-    %^  cat  3
-      content.message
-    ' is now managing the conversation.'
-  ::
-      %leader-remove
-    %^  cat  3
-      content.message
-    ' is no longer managing the conversation.'
-  ==
-::
-++  print-reaction
-  |=  [src=ship =ping]
-  ^-  @t
-  ?>  ?=(%react -.ping)
-  %-  crip
-  "{<src>} reacted {<reaction.ping>} to message {<on.ping>}"
-::
-++  print-edit
-  |=  [src=ship =ping]
-  ^-  @t
-  ?>  ?=(%edit -.ping)
-  %-  crip
-  "{<src>} edited message {<on.ping>} to {<edit.ping>}"
 ::
 ::  json creation
 ::
@@ -211,8 +278,7 @@
         ['dm' b+?=(%dm -.p.meta.c)]
         ['members' a+(turn ~(tap in members.p.meta.c) ship)]
         :-  'leaders'
-        ?-  -.p.meta.c
-          ?(%open %dm)  ~
+        ?+  -.p.meta.c  ~
           %managed      a+(turn ~(tap in leaders.p.meta.c) ship)
         ==
         ['muted' b+muted.c]
@@ -275,32 +341,6 @@
       |=  [c=conversation-id =message]
       (message-to-json:parsing message `c)
     ::
-        %invites
-      %+  frond  'invites'
-      %-  pairs
-      :~  :-  'sent'
-          ^-  json
-          %-  pairs
-          %+  turn  ~(tap by sent.upd)
-          |=  [k=conversation-id s=(set @p)]
-          [(scot %ux k) a+(turn ~(tap in s) ship)]
-      ::
-          :-  'received'
-          ^-  json
-          %-  pairs
-          %+  turn  ~(tap by rec.upd)
-          |=  [k=conversation-id v=[from=@p c=conversation]]
-          :-  (scot %ux k)
-          %-  pairs
-          :~  ['from' (ship from.v)]
-              ['conversation' (conversation-to-json c.v)]
-          ==
-      ==
-    ::
-        %blocklist
-      %+  frond  'blocklist'
-      a+(turn ~(tap in +.upd) ship)
-    ::
         %notification
       %+  frond  'notification'
       %-  pairs
@@ -318,4 +358,59 @@
       ==
     ==
   --
+::
+::  NOT USING THESE ATM
+::
+++  print-message
+  |=  =message
+  ^-  @t
+  ?+    kind.message
+      %+  rap  3
+      :~  'Message ('
+          (scot %ud id.message)
+          ') from '
+          (scot %p author.message)
+          ': '
+          content.message
+      ==
+  ::
+      %member-add
+    %^  cat  3
+      content.message
+    ' joined the conversation.'
+  ::
+      %member-remove
+    %^  cat  3
+      content.message
+    ' left the conversation.'
+  ::
+      %change-name
+    %^  cat  3
+      'Conversation name changed to '
+    (cat 3 content.message '.')
+  ::
+      %leader-add
+    %^  cat  3
+      content.message
+    ' is now managing the conversation.'
+  ::
+      %leader-remove
+    %^  cat  3
+      content.message
+    ' is no longer managing the conversation.'
+  ==
+::
+++  print-reaction
+  |=  [src=ship =ping]
+  ^-  @t
+  ?>  ?=(%react -.ping)
+  %-  crip
+  "{<src>} reacted {<reaction.ping>} to message {<on.ping>}"
+::
+++  print-edit
+  |=  [src=ship =ping]
+  ^-  @t
+  ?>  ?=(%edit -.ping)
+  %-  crip
+  "{<src>} edited message {<on.ping>} to {<edit.ping>}"
 --

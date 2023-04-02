@@ -5,18 +5,19 @@
       ship-url=@t
       level=?(%off %low %medium %high)
   ==
++$  ship-sig  [p=@ux q=ship r=life]
 ::
-::  schema: a table handles one conversation
+::  message table schema: a table handles one conversation
 ::
 ++  messages-schema
-  :~  [%id [0 | %ud]]  ::  ordering produced by message router
+  :~  [%id [0 | %ud]]           ::  ordering produced by message router
       [%author [1 | %p]]
-      [%signature [2 | %blob]]  ::  we probably don't care about storing these
-      [%timestamp [3 | %da]]  ::  time *we* received message at
+      [%signature [2 | %blob]]
+      [%timestamp [3 | %da]]    ::  time that router received message at
       [%kind [4 | %tas]]
       [%content [5 | %t]]
       [%edited [6 | %f]]
-      [%reference [7 & %ud]]  ::  for replies
+      [%reference [7 & %ud]]    ::  for replies
       [%reactions [8 | %map]]
       [%mentions [9 | %set]]
   ==
@@ -30,15 +31,12 @@
       ::  can add an author index if we want to add search by author
   ==
 ::
-::  the type that goes into the database
-::  we can trust the database, it's ours
-::  so we can do this to turn a row into a message:
-::  !<(message [-:!>(*message) row])
+::  message mold must match message schema
 ::
 +$  message
   $:  id=message-id
       author=@p
-      signature=[%b p=[p=@ux q=ship r=life]]
+      signature=[%b p=ship-sig]
       timestamp=@da
       kind=message-kind
       content=@t
@@ -57,7 +55,7 @@
 ::  be many things can be broken into multiple messages.
 ::
 +$  message-kind
-  $?  %text  %code
+  $?  %text
       ::  in these kinds, message content is a `@t`(scot %p @p)
       %member-add     ::  in %open, anyone can send this, otherwise only leaders
       %member-remove  ::  in %open, only member leaving can send
@@ -66,52 +64,39 @@
       %leader-remove  ::  only for %many-leader
       %change-router  ::  TBD
       ::  special bespoke message types
-      %poll         ::  content is question being asked \n
-                    ::  first response \n second response \n ...
-      %send-tokens  ::  content is a (scot %ux transaction-hash)
+      %poll         ::  content is "question being asked \n
+                    ::  first response \n second response \n ..."
+      %send-tokens  ::  content is a (scot %ux transaction-hash) (TODO)
       %app-link     ::  content is @t link (everything after ship URL)
   ==
-++  my-special-number  521.510.348.146  ::  `@`%reply, lol
-::
-::  emojees
 ::
 +$  reaction  @t
 ::
-::  a conversation is a groupchat of 2-100 ships.
-::  schema: we keep a table of all our conversations
+::  conversations schema: we keep one table of all our conversations
 ::
 ++  conversations-schema
-  :~  [%id [0 | %ux]]
+  :~  [%id [0 | %ux]]            ::  also the name of a convo's messages table
       [%name [1 | %t]]
       [%last-active [2 | %da]]
       [%last-message [3 | %ud]]
-      [%last-read [4 | %ud]]  ::  id of message we last saw
+      [%last-read [4 | %ud]]     ::  id of message we last saw
       [%router [5 | %p]]
-      [%members [6 | %blob]]
+      [%members [6 | %blob]]     ::  members and type of convo
       [%deleted [7 | %f]]
       [%muted [8 | %f]]
   ==
 ::
 ++  conversations-indices
-  :~  [~[%id] primary=& autoincrement=~ unique=& clustered=|]
-      [~[%last-active] primary=| autoincrement=~ unique=| clustered=&]
-  ==
+  [~[%id] primary=& autoincrement=~ unique=& clustered=|]^~
 ::
-::  used to mold the blob inside schema
-::
-+$  conversation-metadata
-  $%  [%managed members=(set @p) leaders=(set @p)]
-      [%open members=(set @p) ~]  ::  hate this ~
-      [%dm members=(set @p) ~]
-  ==
-::
-::  a conversation id is constructed by hashing the concatenation
-::  of the two ships involved (if DM) or creator + some entropy if group
+::  a groupchat id must be globally unique, so that tables can
+::  be synced by anyone. it is constructed by the +sham of
+::  the creator @p, time at creation, and the conversation's name.
+::  DM ids are made by +sham-ing the two @ps involved
 ::
 +$  conversation-id  @ux
 ::
-::  can do this to turn a row into a conversation:
-::  !<(conversation [-:!>(*conversation) row])
+::  conversation mold must match conversations schema
 ::
 +$  conversation
   $:  id=conversation-id
@@ -126,29 +111,25 @@
       ~
   ==
 ::
-::  all messaging is done through pokes.
-::  messages are sent to router, who then pokes all members
++$  conversation-metadata
+  $%  [%managed members=(set @p) leaders=(set @p)]
+      [%open members=(set @p) ~]  ::  hate this ~
+      [%dm members=(set @p) ~]
+      [%inbox members=(set @p) ~]  ::  only ever contains us
+  ==
+::
+::  all messaging is done through pings.
+::  pings are all sent to router
 ::
 +$  ping
-  $%  [%message routed=? =conversation-id =message]  ::  sent thru router
-      [%edit =conversation-id on=message-id edit=@t]  ::  sent direct
-      [%react =conversation-id on=message-id =reaction]  ::  sent direct
-      ::  these are only sent when conversation size is below cutoff
-      [%delivered =conversation-id hash=@uvH]
-      ::  these are sent to anyone
-      [%invite =conversation]            ::  person creating the invite sends
-      [%accept-invite =conversation-id]  ::  %member-add message upon accept
-      [%reject-invite =conversation-id]
-      ::  this allows any ship to request to join *free-for-all* convos
-      ::  if they know the convo ID and the @p of a member ship.
-      ::  app is tuned to automatically accept these, can be turned off.
-      [%invite-request =conversation-id]
+  $%  [%message =conversation-id =message]
+      [%edit =conversation-id sig=ship-sig on=message-id edit=@t]
+      [%react =conversation-id sig=ship-sig on=message-id =reaction]
   ==
 ::
-+$  pending-ping
-  $%  [%edit src=@p edit=@t]
-      [%react src=@p =reaction]
-  ==
+::  entry pokes handle creating and joining conversations.
+::
++$  entry  [%invite =conversation]  ::  router sends this
 ::
 ::  pokes that our frontend performs:
 ::
@@ -180,9 +161,7 @@
       [%read-message =conversation-id =message-id]
       ::
       [%make-invite to=@p =conversation-id]
-      [%accept-invite =conversation-id]
-      [%reject-invite =conversation-id]
-      [%make-invite-request to=@p =conversation-id]  ::  FFA convos only!
+      [%accept-invite from=@p =conversation]
       ::
       $:  %search  uid=@ux
           only-in=(unit conversation-id)
@@ -198,7 +177,7 @@
       [%unmute-conversation =conversation-id]
   ==
 ::
-::  update types from scries and subscriptions, used for interacting
+::  update types from scries and subscriptions, used for interacting with FE
 ::
 +$  pongo-update
   $%  [%conversations (list conversation-info)]
@@ -208,11 +187,6 @@
       [%sending =conversation-id identifier=@t]
       [%delivered =conversation-id identifier=@t =message-id]
       [%search-result (list [=conversation-id =message])]
-      $:  %invites
-          sent=(jug conversation-id @p)
-          rec=(map conversation-id [from=@p =conversation])
-      ==
-      [%blocklist (set @p)]
       [%notification convo-name=@t author=@p content=@t]
       [%notif-settings notif-settings]
   ==
@@ -220,7 +194,7 @@
 +$  thread-update
   $%  [%denied from=@p]
       [%shared from=@p address=@ux]
-      [%finished sequencer-receipt:uqbar]
+      [%finished hash=@ux sequencer-receipt:uqbar]
   ==
 ::
 +$  conversation-info

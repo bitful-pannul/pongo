@@ -4,7 +4,7 @@
     glob-http+['https://pongo-app-distro.s3.us-east-2.amazonaws.com/glob-0v5.2vtha.v0n5i.3bv4k.m7keu.q47rp.glob' 0v5.2vtha.v0n5i.3bv4k.m7keu.q47rp]
     image+'https://pongo-app-distro.s3.us-east-2.amazonaws.com/urbit-icon.png'
     base+'pongo'
-    version+[1 0 3]
+    version+[1 1 0]
     website+'https://uqbar.network'
     license+'MIT'
 ==
