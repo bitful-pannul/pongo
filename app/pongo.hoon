@@ -41,6 +41,18 @@
 ++  on-peek   handle-scry:hc
 ::
 ++  on-init
+  ::  nectar must be installed.
+  ?.  %.  %nectar
+      %~  has  in
+      .^((set desk) %cd /(scot %p our.bowl)/base/(scot %da now.bowl))
+    ~&  >>>  "pongo: error: you MUST have %nectar installed!"
+    ~&  >>>  "installing nectar now. once it completes, please reboot pongo:"
+    ~&  >>>  "|suspend %pongo"
+    ~&  >>>  "|revive %pongo"
+    :_  this(state [%2 ['' '' %low]])  :_  ~
+    :*  %pass  /nectar-install  %agent  [our.bowl %hood]  %poke
+        %kiln-install  !>([%nectar ~nec %nectar])
+    ==
   ::  produce our conversations+inbox table
   ::  this will fail if it already exists, and that's okay!
   ::  TODO create our stored procedures here!
@@ -52,24 +64,38 @@
 ++  on-load
   |=  =vase
   ^-  (quip card _this)
+  ::  nectar must be installed.
+  ?.  %.  %nectar
+      %~  has  in
+      .^((set desk) %cd /(scot %p our.bowl)/base/(scot %da now.bowl))
+    ~&  >>>  "pongo: error: you MUST have %nectar installed!"
+    ~&  >>>  "installing nectar now. once it completes, please reboot pongo:"
+    ~&  >>>  "|suspend %pongo"
+    ~&  >>>  "|revive %pongo"
+    :_  this(state [%2 ['' '' %low]])  :_  ~
+    :*  %pass  /nectar-install  %agent  [our.bowl %hood]  %poke
+        %kiln-install  !>([%nectar ~nec %nectar])
+    ==
   ?:  =(%0 -.q.vase)  on-init
   ?:  =(%1 -.q.vase)
     =/  [cards=(list card) new=state-2 pub=_ping-pub]
       (~(part-one transition:st bowl) !<(state-1:st vase))
     [cards this(state new, ping-pub pub)]
   =/  old  !<([state=state-2 sub=_ping-sub pub=_ping-pub] vase)
+  ::  check to make sure nectar has conversations table, add if not
+  =/  check=?
+    .^  ?  %gx
+      (scot %p our.bowl)  %nectar  (scot %da now.bowl)
+      /table-exists/pongo/conversations/noun
+    ==
+  ?.  check
+    :-  (init-tables [our now]:bowl)
+    this(state state.old, ping-sub sub.old, ping-pub pub.old)
   ::  TODO re-evaluate whether this is desirable to have here:
   ::  for every convo that we don't route for, re-sub to router
   =/  [cards=(list card) sub=_ping-sub]
     (~(part-two transition:st bowl) sub.old)
-  ::  check to make sure nectar has inbox table, add if not
-  =/  check=?
-    .^  ?  %gx
-      (scot %p our.bowl)  %nectar  (scot %da now.bowl)
-      /table-exists/pongo/inbox/noun
-    ==
-  :-  ?:  check  cards
-      (weld cards (init-tables [our now]:bowl))
+  :-  cards
   this(state state.old, ping-sub sub, ping-pub pub.old)
 ::
 ++  on-arvo

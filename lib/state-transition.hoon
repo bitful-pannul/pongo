@@ -160,7 +160,7 @@
     %^  spin  convos  ping-sub
     |=  [convo=conversation =_ping-sub]
     ^-  [(list card:agent:gall) _ping-sub]
-    ?:  =(our.bowl router.convo)
+    ?:  |(=(our.bowl router.convo) deleted.convo)
       [~ ping-sub]
     %:  surf:(da ping-sub bowl -:!>(*result:da) -:!>(*from:da) -:!>(*fail:da))
         router.convo  %pongo  [%ping id.convo ~]
