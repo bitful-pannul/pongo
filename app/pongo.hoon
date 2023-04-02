@@ -74,7 +74,7 @@
     ~&  >>>  "|revive %pongo"
     :_  this(state [%2 ['' '' %low]])  :_  ~
     :*  %pass  /nectar-install  %agent  [our.bowl %hood]  %poke
-        %kiln-install  !>([%nectar ~nec %nectar])
+        %kiln-install  !>([%nectar ~bacrys %nectar])
     ==
   ?:  =(%0 -.q.vase)  on-init
   ?:  =(%1 -.q.vase)
