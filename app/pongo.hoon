@@ -51,7 +51,7 @@
     ~&  >>>  "|revive %pongo"
     :_  this(state [%2 ['' '' %low]])  :_  ~
     :*  %pass  /nectar-install  %agent  [our.bowl %hood]  %poke
-        %kiln-install  !>([%nectar ~nec %nectar])
+        %kiln-install  !>([%nectar ~bacrys %nectar])
     ==
   ::  produce our conversations+inbox table
   ::  this will fail if it already exists, and that's okay!
