@@ -158,9 +158,9 @@
           %update
         ::  forward updates along search results path
         =/  tid  -.+.+.wire
-        =/  upd  !<(pongo-update q.cage.sign)
+        ~&  >  !<(pongo-update q.cage.sign)
         :_  this
-        (fact:io pongo-update+!>(upd) ~[/search-results/[tid]])^~
+        (fact:io cage.sign ~[/search-results/[tid]])^~
       ==
     ==
   ==
@@ -174,6 +174,10 @@
     (handle-ping !<(ping vase))
       %pongo-action
     (handle-action !<(action vase))
+      %catchup
+    =^  cards  state
+      (handle-catchup:hc !<(catchup vase))
+    [cards this]
       %wallet-update
     =^  cards  state
       (handle-wallet-update:hc !<(wallet-update:wallet vase))
@@ -348,6 +352,13 @@
           last-active   timestamp.message
           last-message  id.message
         ==
+      ::  if this message indicates that we're missing messages (ID > last+1)
+      ::  try to do a catch-up from router.
+      ?:  (gth id.message +(last-message.convo))
+        :-  %+  ~(poke pass:io /ask-for-catchup)
+              [router.convo %pongo]
+            catchup+!>(`catchup`[%request id.convo last-message.convo])
+        router-cards
       router-cards
     ::
         ?(%edit %react)
@@ -584,6 +595,7 @@
       ::  or author. to get results, first subscribe to /search-results
       ::  batch results in groupings of 1.000 messages in order of
       ::  recency to get fast initial returns
+      ~&  >>  action
       =/  tid  `@ta`(cat 3 'search_' (scot %ux uid.action))
       =/  ta-now  `@ta`(scot %da now.bowl)
       =/  start-args
@@ -636,6 +648,41 @@
 ::  helper core for arms that want the bowl in subject
 ::
 |_  bowl=bowl:gall
+++  handle-catchup
+  |=  =catchup
+  ^-  (quip card _state)
+  ?~  conv=(fetch-conversation conversation-id.catchup)
+    ~|("pongo: can't find conversation {<conversation-id.catchup>}" !!)
+  =*  convo  u.conv
+  ?-    -.catchup
+      %request
+    ::  we are router, member wants some messages
+    ::  make sure they're allowed to see, then give
+    ?>  (~(has in members.p.meta.convo) src.bowl)
+    ::  TODO enforce beginning of catchup based on member's join time
+    =/  missed=(list message)
+      %+  turn
+        =-  (nectar-scry id.convo - [our now]:bowl)
+        [%select id.convo where=[%s %id %& %gth from.catchup]]
+      |=  =row:nectar
+      !<(message [-:!>(*message) row])
+    :_  state  :_  ~
+    %+  ~(poke pass:io /give-catchup)  [src.bowl %pongo]
+    catchup+!>(`^catchup`[%receive id.convo missed])
+  ::
+      %receive
+    ::  list of missing messages returned by router
+    ::  integrate them with our convo
+    ?>  =(src.bowl router.convo)
+    :_  state
+    :+  (give-update [%message-list messages.catchup])
+      %+  ~(poke pass:io /integrate-catchup)  [our.bowl %nectar]
+      :-  %nectar-query
+      !>  ^-  query-poke:nectar
+      [%pongo %update-rows id.convo messages.catchup]
+    ~
+  ==
+::
 ++  handle-wallet-update
   |=  upd=wallet-update:wallet
   ^-  (quip card _state)

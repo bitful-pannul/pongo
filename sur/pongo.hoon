@@ -127,6 +127,13 @@
       [%react =conversation-id sig=ship-sig on=message-id =reaction]
   ==
 ::
+::  catchup pokes, for when you go offline
+::
++$  catchup
+  $%  [%request =conversation-id from=message-id]
+      [%receive =conversation-id messages=(list message)]
+  ==
+::
 ::  entry pokes handle creating and joining conversations.
 ::
 +$  entry  [%invite =conversation]  ::  router sends this

@@ -194,16 +194,31 @@
 ++  do-search
   |=  [search our=@p now=@da]
   ^-  (list [conversation-id message])
-  ::  TODO handle searches across all conversations
+  |^
+  ?^  only-in
+    ::  search is limited to one conversation
+    (single-convo u.only-in)
+  ::  search is across *all* conversations
+  %-  zing
   %+  turn
-    =-  (nectar-scry (need only-in) - our now)
-    ^-  query:nectar
-    :+  %select  (need only-in)
-    =+  [%s %content %& %text-find (trip phrase)]
-    ?~  only-author  -
-    [%and [%s %author %& %eq u.only-author] -]
+    =+  [%select %conversations where=[%n ~]]
+    (nectar-scry %conversations - our now)
   |=  =row:nectar
-  [(need only-in) !<(message [-:!>(*message) row])]
+  =+  convo=!<(conversation [-:!>(*conversation) row])
+  (single-convo id.convo)
+  ::
+  ++  single-convo
+    |=  id=conversation-id
+    ^-  (list [conversation-id message])
+    %+  turn
+      =-  (nectar-scry id - our now)
+      :+  %select  id
+      =+  [%s %content %& %text-find (trip phrase)]
+      ?~  only-author  -
+      [%and [%s %author %& %eq u.only-author] -]
+    |=  =row:nectar
+    [id !<(message [-:!>(*message) row])]
+  --
 ::
 ::  utils
 ::
