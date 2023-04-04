@@ -155,7 +155,7 @@
     ?+    -.sign  (on-agent:def wire sign)
         %fact
       ?+    p.cage.sign  (on-agent:def wire sign)
-          %update
+          %pongo-update
         ::  forward updates along search results path
         =/  tid  -.+.+.wire
         ~&  >  !<(pongo-update q.cage.sign)
