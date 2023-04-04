@@ -15,7 +15,7 @@
 ;<  ~  bind:m
   %-  send-raw-card
   :^  %give  %fact  ~[path]
-  :-  %update
+  :-  %pongo-update
   !>  ^-  pongo-update:pongo
   [%search-result (do-search:pongo search our now)]
 ::
