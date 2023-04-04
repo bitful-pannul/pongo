@@ -82,21 +82,8 @@
       (~(part-one transition:st bowl) !<(state-1:st vase))
     [cards this(state new, ping-pub pub)]
   =/  old  !<([state=state-2 sub=_ping-sub pub=_ping-pub] vase)
-  ::  check to make sure nectar has conversations table, add if not
-  =/  check=?
-    .^  ?  %gx
-      (scot %p our.bowl)  %nectar  (scot %da now.bowl)
-      /table-exists/pongo/conversations/noun
-    ==
-  ?.  check
-    :-  (init-tables [our now]:bowl)
-    this(state state.old, ping-sub sub.old, ping-pub pub.old)
-  ::  TODO re-evaluate whether this is desirable to have here:
-  ::  for every convo that we don't route for, re-sub to router
-  =/  [cards=(list card) sub=_ping-sub]
-    (~(part-two transition:st bowl) sub.old)
-  :-  cards
-  this(state state.old, ping-sub sub, ping-pub pub.old)
+  :-  (~(poke pass:io /load-poke) [our.bowl %pongo] load+!>(~))^~
+  this(state state.old, ping-sub sub.old, ping-pub pub.old)
 ::
 ++  on-arvo
   |=  [=wire sign=sign-arvo]
@@ -189,6 +176,23 @@
       %sss-pongo-pings
     =^  cards  ping-sub
       (apply:da-ping !<(into:da-ping (fled vase)))
+    [cards this]
+  ::
+  ::  dumb indirection layer because on-load/on-init in gall are broken
+  ::
+      %load
+    ::  check to make sure nectar has conversations table, add if not
+    ~&  >>  "pongo: loaded"
+    =/  check=?
+      .^  ?  %gx
+        (scot %p our.bowl)  %nectar  (scot %da now.bowl)
+        /table-exists/pongo/conversations/noun
+      ==
+    ?.  check
+      [(init-tables [our now]:bowl) this]
+    ::  for every convo that we don't route for, re-sub to router
+    =^  cards  ping-sub
+      (~(part-two transition:st bowl) ping-sub)
     [cards this]
   ::
       %entry
