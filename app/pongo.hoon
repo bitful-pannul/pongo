@@ -281,6 +281,16 @@
               (lte (met 3 content.message) message-length-limit)
               (valid-message-contents message convo)
           ==
+      ::  ignore member add/removes if member is already in/out
+      ?:  ?|  ?&  ?=(%member-add kind.message.ping)
+                  =-  (~(has in members.p.meta.convo) -)
+                  (slav %p content.message.ping)
+              ==
+              ?&  ?=(%member-remove kind.message.ping)
+                  =-  !(~(has in members.p.meta.convo) -)
+                  (slav %p content.message.ping)
+          ==  ==
+        `this
       ::  set local timestamp (throwing away ability to re-verify sig btw!!!)
       =.  timestamp.message  now.bowl
       ::  depending on message type, apply changes to conversation metadata
@@ -566,9 +576,9 @@
     ::
         %make-invite
       ::  make a %member-add message in the convo; router will make invite
-      ~&  >>  "inviting {<to.action>} to conversation"
       ?~  convo=(fetch-conversation:hc conversation-id.action)
         ~|("%pongo: couldn't find that conversation id" !!)
+      ~&  >>  "inviting {<to.action>} to conversation"
       :_  this  :_  ~
       %+  ~(poke pass:io /send-member-add)
         [our.bowl %pongo]
@@ -581,6 +591,10 @@
       ::  make a messages table, start surfing the wave
       ~&  >>  "accepting invite"
       =*  convo  conversation.action
+      ::  if we *already have this conversation and are router*,
+      ::  make sure to REJECT invite
+      ?^  (fetch-conversation:hc id.convo)
+        `this
       =^  surf-cards  ping-sub
         (surf:da-ping router.convo %pongo [%ping id.convo ~])
       :_  this
