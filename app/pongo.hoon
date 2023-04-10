@@ -145,7 +145,7 @@
           %pongo-update
         ::  forward updates along search results path
         =/  tid  -.+.+.wire
-        ~&  >  !<(pongo-update q.cage.sign)
+        ::  ~&  >  !<(pongo-update q.cage.sign)
         :_  this
         (fact:io cage.sign ~[/search-results/[tid]])^~
       ==

@@ -207,7 +207,7 @@
   ::  search is across *all* conversations
   %-  zing
   %+  turn
-    =+  [%select %conversations where=[%n ~]]
+    =+  [%select %conversations where=[%s %deleted %& %eq %.n]]
     (nectar-scry %conversations - our now)
   |=  =row:nectar
   =+  convo=!<(conversation [-:!>(*conversation) row])
