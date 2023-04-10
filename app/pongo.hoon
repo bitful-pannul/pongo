@@ -274,23 +274,13 @@
       =*  message  message.ping
       ::  after validating message, insert it in our messages table
       =/  message-hash  (make-message-hash [content author timestamp]:message)
-      ~|  "pongo: received invalid message"
+      ~|  "pongo: ignoring invalid message"
       ~|  message
       ?>  ?&  (validate:sig our.bowl p.signature.message message-hash now.bowl)
               (~(has in members.p.meta.convo) author.message)
               (lte (met 3 content.message) message-length-limit)
               (valid-message-contents message convo)
           ==
-      ::  ignore member add/removes if member is already in/out
-      ?:  ?|  ?&  ?=(%member-add kind.message.ping)
-                  =-  (~(has in members.p.meta.convo) -)
-                  (slav %p content.message.ping)
-              ==
-              ?&  ?=(%member-remove kind.message.ping)
-                  =-  !(~(has in members.p.meta.convo) -)
-                  (slav %p content.message.ping)
-          ==  ==
-        `this
       ::  set local timestamp (throwing away ability to re-verify sig btw!!!)
       =.  timestamp.message  now.bowl
       ::  depending on message type, apply changes to conversation metadata

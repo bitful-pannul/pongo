@@ -89,6 +89,8 @@
     ?=(?(%text %send-tokens %app-link) kind.message)
   ?+    kind.message  %.y
       %member-remove
+    ?.  (~(has in members.p.meta.convo) (slav %p content.message))
+      %.n
     ?:  =(author.message (slav %p content.message))  %.y
     ?-  -.p.meta.convo
       ?(%open %dm)  %.n
@@ -96,6 +98,10 @@
     ==
   ::
       ?(%member-add %change-name)
+    ?:  ?&  ?=(%member-add kind.message)
+            (~(has in members.p.meta.convo) (slav %p content.message))
+        ==
+      %.n
     ?-  -.p.meta.convo
       ?(%open %dm)  %.y  ::  this is right, sadly
       %managed      (~(has in leaders.p.meta.convo) author.message)
