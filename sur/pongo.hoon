@@ -136,7 +136,10 @@
 ::
 ::  entry pokes handle creating and joining conversations.
 ::
-+$  entry  [%invite =conversation]  ::  router sends this
++$  entry
+  $%  [%request-invite =conversation-id]
+      [%invite =conversation]  ::  router sends this
+  ==
 ::
 ::  pokes that our frontend performs:
 ::

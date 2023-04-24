@@ -124,9 +124,26 @@
       =^  cards  ping-sub  (tell:da-ping |3:wire sign)
       [cards this]
     ==
-  ::  thread wires
   ::
   ?+    -.wire  (on-agent:def wire sign)
+      %send-invite
+    ?>  ?=(%poke-ack -.sign)
+    ?~  p.sign  `this
+    ?~  +.wire  `this
+    ::  an invite we sent failed, if DM, try to join theirs instead
+    ::  and delete our faultily-produced DM convo
+    ::  (only DM invites have ID in wire)
+    =/  =conversation-id  (slav %ux -.+.wire)
+    :_  this
+    :~  %+  ~(poke pass:io /leave-bad-dm)
+          [our.bowl %pongo]
+        pongo-action+!>(`action`[%leave-conversation conversation-id])
+    ::
+        %+  ~(poke pass:io /request-invite)
+          [src.bowl %pongo]
+        entry+!>(`entry`[%request-invite conversation-id])
+    ==
+  ::
       %send-tokens-thread
     ?+    -.sign  (on-agent:def wire sign)
         %fact
@@ -196,13 +213,29 @@
     [cards this]
   ::
       %entry
-    ::  we've received an invite to a conversation: automatically accept
-    ~&  >>  "joining convo"
     =/  =entry  !<(entry vase)
     :_  this
-    :~  (give-update [%invite conversation.entry])
-        %+  ~(poke pass:io /accept-invite)  [our.bowl %pongo]
-        pongo-action+!>(`action`[%accept-invite src.bowl conversation.entry])
+    ?-    -.entry
+        %invite
+      ::  we've received an invite to a conversation: automatically accept
+      ::  if we *already have this conversation and are router*,
+      ::  make sure to REJECT invite AND alert inviter of this
+      =/  convo  (fetch-conversation:hc id.conversation.entry)
+      ?:  &(?=(^ convo) !deleted.u.convo)
+        !!
+      ~&  >>  "joining convo"
+      :~  (give-update [%invite conversation.entry])
+          %+  ~(poke pass:io /accept-invite)  [our.bowl %pongo]
+          pongo-action+!>(`action`[%accept-invite src.bowl conversation.entry])
+      ==
+    ::
+        %request-invite
+      ?~  convo=(fetch-conversation:hc conversation-id.entry)  !!
+      ~&  >>  "giving invite to requester {<src.bowl>}"
+      :_  ~
+      %+  ~(poke pass:io /send-invite)
+        [src.bowl %pongo]
+      entry+!>(`^entry`[%invite u.convo])
     ==
   ::
       %sss-on-rock
@@ -449,7 +482,8 @@
           pongo+[%update-rows %conversations ~[convo]]
       %+  turn  mems
       |=  to=@p
-      %+  ~(poke pass:io /send-invite)  [to %pongo]
+      %+  ~(poke pass:io /send-invite/(scot %ux id.convo))
+        [to %pongo]
       entry+!>(`entry`[%invite convo])
     ::
         %leave-conversation
@@ -581,10 +615,6 @@
       ::  make a messages table, start surfing the wave
       ~&  >>  "accepting invite"
       =*  convo  conversation.action
-      ::  if we *already have this conversation and are router*,
-      ::  make sure to REJECT invite
-      ?^  (fetch-conversation:hc id.convo)
-        `this
       =^  surf-cards  ping-sub
         (surf:da-ping router.convo %pongo [%ping id.convo ~])
       :_  this
@@ -595,7 +625,7 @@
       :-  %nectar-query
       !>  ^-  query-poke:nectar
       :-  %pongo
-      :+  %insert  %conversations
+      :+  %update-rows  %conversations
       ~[convo(last-active now.bowl, last-read 0)]
     ::
         %search
