@@ -204,7 +204,8 @@
     ?.  ?=(?(%add-member %del-member) -.action)
       `this
     :_  this  :_  ~
-    %-  ~(poke-self pass:io /orgs-member-change)
+    %+  ~(poke pass:io /orgs-member-change)
+      [our.bowl %pongo]
     :-  %pongo-action
     !>  ^-  ^action
     :*  %send-message
@@ -490,7 +491,9 @@
         ==
       =/  convo=conversation
         :*  `@ux`id
-            name.action
+            ?+  -.config.action  name.action
+              %org  (spat name.config.action)
+            ==
             last-active=now.bowl
             last-message=0
             last-read=0
