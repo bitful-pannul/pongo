@@ -1,5 +1,5 @@
 /-  *pongo, uqbar=zig-uqbar, wallet=zig-wallet,
-    nectar, pongo-pings
+    nectar, pongo-pings, orgs
 /+  verb, dbug, default-agent, io=agentio,
     *pongo, *sss, sig, st=state-transition
 |%
@@ -194,6 +194,29 @@
     =^  cards  ping-sub
       (apply:da-ping !<(into:da-ping (fled vase)))
     [cards this]
+  ::
+      %orgs-action
+    ::  send an add or remove member message to an %org-type chat
+    ::  based on an update from the %orgs middleware
+    ::  currently ignoring any actions other than member add/del
+    ::  TODO handle %replace-members, %delete-org
+    =/  =action:con:orgs  !<(action:con:orgs vase)
+    ?.  ?=(?(%add-member %del-member) -.action)
+      `this
+    :_  this  :_  ~
+    %-  ~(poke-self pass:io /orgs-member-change)
+    :-  %pongo-action
+    !>  ^-  ^action
+    :*  %send-message
+        ''
+        org-id.action
+        ?-  -.action  ::  lol
+          %add-member  %member-add
+          %del-member  %member-remove
+        ==
+        (scot %p ship.action)
+        ~  ~
+    ==
   ::
   ::  dumb indirection layer because on-load/on-init in gall are broken
   ::
@@ -440,18 +463,31 @@
       ::  if a conversation is a DM (1:1 convo) we assign unique ID based
       ::  on the two ship names. DMs cannot be duplicated this way.
       ::
+      =?    members.config.action
+          ?=(%org -.config.action)
+        .^  (set ship)  %gx
+          (scot %p our.bowl)  %orgs  (scot %da now.bowl)
+          %get-members  (scot %ux id.config.action)
+          (snoc name.config.action %noun)
+        ==
       =.  members.config.action
         (~(put in members.config.action) our.bowl)
       =/  member-count  ~(wyt in members.config.action)
       ::  generate unique ID
       =/  id=conversation-id
-        ?:  ?=(%dm -.config.action)
+        ?+    -.config.action
+            ::  default case
+            `@ux`(sham (rap 3 ~[our.bowl now.bowl name.action]))
+        ::
+            %org  id.config.action
+        ::
+            %dm
           ::  enforce that we don't already have a DM of this nature
           ::  and that DMs have exactly 2 members
           ?.  =(member-count 2)
             ~|("pongo: error: tried to make multiparty DM" !!)
           `@ux`(sham (rap 3 ~(tap in members.config.action)))
-        `@ux`(sham (rap 3 ~[our.bowl now.bowl name.action]))
+        ==
       =/  convo=conversation
         :*  `@ux`id
             name.action
@@ -474,12 +510,19 @@
         %+  perm:du-ping  path^~
         |=((unit (set @p)) `members.config.action)
       :_  this
-      %+  welp  (make-messages-table:hc id.convo our.bowl)
+      %+  welp
+        (make-messages-table:hc id.convo our.bowl)
       :-  %+  ~(poke pass:io /add-convo)
             [our.bowl %nectar]
           :-  %nectar-query
           !>  ^-  query-poke:nectar
           pongo+[%update-rows %conversations ~[convo]]
+      =-  ::  if convo type is %org, start tracking %orgs
+          ?.  ?=(%org -.config.action)  -
+          :_  -
+          %+  ~(poke pass:io /track-orgs)
+            [our.bowl %orgs]
+          tracker-request+!>(%pongo)
       %+  turn  mems
       |=  to=@p
       %+  ~(poke pass:io /send-invite/(scot %ux id.convo))
