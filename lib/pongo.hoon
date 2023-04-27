@@ -161,6 +161,12 @@
         ==
     ::
         :-  %body
+        ?:  =(kind.message %webrtc-call)
+          ?:  =(content.message 'start')
+            s+'Call started'
+          ?:  =(content.message 'end')
+            s+'Call ended'
+          s+'Incoming Call'
         ?-  level.notif-settings
           %high    s+''
             %medium
@@ -179,6 +185,8 @@
             ['ship_url' s+ship-url.notif-settings]
             ['conversation_id' s+(scot %ux id.conversation)]
             ['message_id' s+(scot %ud id.message)]
+            ['kind' s+(scot %tas kind.message)]
+            ['author' s+(scot %p author.message)]
         ==
     ==
   ==

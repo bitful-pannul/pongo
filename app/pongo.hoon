@@ -319,7 +319,7 @@
       ::  depending on message type, apply changes to conversation metadata
       =^  cards  convo
         ?+    kind.message
-            ::  text, poll, send-tokens, app-link
+            ::  text, poll, send-tokens, app-link, webrtc-call
             ?:  muted.convo  `convo
             =-  :_  convo
                 :-  (give-update [%message id.convo message])
@@ -363,8 +363,13 @@
             (~(del in leaders.p.meta.convo) (slav %p content.message))
           `convo
         ::
+            %pass-through
+            [(give-update [%message id.convo message])^~ convo]
+        ::
             %change-router  !!  ::  TBD
         ==
+      ::  if message-kind is %pass-through, don't save to %nectar and just send it out
+      ?:  ?=(%pass-through kind.message)  [(weld cards router-cards) this]
       ::  if this message is for a DM that we've "deleted", set conversation
       ::  to undeleted and add a new messages table for it.
       :_  this

@@ -68,6 +68,8 @@
                     ::  first response \n second response \n ..."
       %send-tokens  ::  content is a (scot %ux transaction-hash) (TODO)
       %app-link     ::  content is @t link (everything after ship URL)
+      %webrtc-call  ::  content is a @t of 'request: wss://websocket-endpoint.com', 'start', or 'end'
+      %pass-through ::  content will not be saved
   ==
 ::
 +$  reaction  @t
