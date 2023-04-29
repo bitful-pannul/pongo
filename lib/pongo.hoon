@@ -94,6 +94,7 @@
     ?:  =(author.message (slav %p content.message))  %.y
     ?-  -.p.meta.convo
       ?(%open %dm)  %.n
+      %org          =(author.message router.convo)  ::  TODO more here
       %managed      (~(has in leaders.p.meta.convo) author.message)
     ==
   ::
@@ -104,18 +105,19 @@
       %.n
     ?-  -.p.meta.convo
       ?(%open %dm)  %.y  ::  this is right, sadly
+      %org          =(author.message router.convo)  ::  TODO more here
       %managed      (~(has in leaders.p.meta.convo) author.message)
     ==
   ::
       %leader-add
     ?-  -.p.meta.convo
-      ?(%open %dm)  %.n
+      ?(%open %dm %org)  %.n
       %managed      (~(has in leaders.p.meta.convo) author.message)
     ==
   ::
       %leader-remove
     ?-  -.p.meta.convo
-      ?(%open %dm)  %.n
+      ?(%open %dm %org)  %.n
         %managed
       ?&  (gte ~(wyt in leaders.p.meta.convo) 2)
           (~(has in leaders.p.meta.convo) author.message)

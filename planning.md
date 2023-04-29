@@ -25,7 +25,10 @@ user A posts message 7 by including the ID of message they last saw (6)
 user B posts message 7 in the same way, having not seen user A's message yet
 
 
+##  silly little integration
 
+- new convo type, org-type
+- router just adds and removes every time it gets a ping from %orgs
 
 
 ##  decentralized wager system

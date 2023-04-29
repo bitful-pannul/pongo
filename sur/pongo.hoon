@@ -115,6 +115,7 @@
 ::
 +$  conversation-metadata
   $%  [%managed members=(set @p) leaders=(set @p)]
+      [%org members=(set @p) name=path id=@ux]
       [%open members=(set @p) ~]  ::  hate this ~
       [%dm members=(set @p) ~]
       [%inbox members=(set @p) ~]  ::  only ever contains us
