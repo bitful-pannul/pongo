@@ -74,6 +74,7 @@
       ::  %-  conversation-metadata:p
       %-  of
       :~  [%managed (ot ~[[%members (as (se %p))] [%leaders (as (se %p))]])]
+          [%org (ot ~[[%members (as (se %p))] [%name pa] [%id (se %ux)]])]
           [%open (ot ~[[%members (as (se %p))]])]
           [%dm (ot ~[[%members (as (se %p))]])]
       ==
