@@ -307,6 +307,7 @@
         ['last_read' s+(scot %ud last-read.c)]
         ::  don't share router node
         ['dm' b+?=(%dm -.p.meta.c)]
+        ['org-id' s+?:(?=(%org -.p.meta.c) (scot %ux id.p.meta.c) '')]
         ['members' a+(turn ~(tap in members.p.meta.c) ship)]
         :-  'leaders'
         ?+  -.p.meta.c  ~

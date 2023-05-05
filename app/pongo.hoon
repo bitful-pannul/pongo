@@ -485,7 +485,7 @@
             ::  default case
             `@ux`(sham (rap 3 ~[our.bowl now.bowl name.action]))
         ::
-            %org  id.config.action
+            %org  `@ux`(sham (cat 3 id.config.action now.bowl))
         ::
             %dm
           ::  enforce that we don't already have a DM of this nature
