@@ -40,9 +40,6 @@
           name.act
           %lookup  [id.caller.context next-item ship.act]
       ==  
-    =/  propmap  %-  make-pmap
-      ~[[%name name.act]]
-    ::
     =/  our-zigs-account  
       (hash-data zigs-contract:lib id.caller.context town.context `@`'zigs')
     ::
@@ -59,7 +56,7 @@
             town.context
           :*  %mint
               nft.act
-              ~[[id.caller.context [uri.act propmap %.y]]]
+            ~[[id.caller.context [uri.act (make-pmap ~[[%name name.act]]) %.y]]]
       ==  ==
     :-  mintcalls
     (result ~ [item ~] ~ ~)

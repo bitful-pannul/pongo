@@ -9,7 +9,6 @@
     %+  frond  -.up
     ?-    -.up
         %ships
-      ::
       %-  pairs
       %+  turn  ships.up
       |=  [s=@p p=(unit profile)]
@@ -22,7 +21,6 @@
           ['address' ?~(p [%s ''] s+(scot %ux address.u.p))]
           ::  could do sig too.
       ==
-    ::
         %ship
       %-  pairs
       :~  [%ship s+(scot %p ship.up)]
@@ -32,7 +30,6 @@
           [%address s+(scot %ux address.profile.up)]
           ::  add others?
       ==
-    ::
         %user
       %-  pairs
       :~  [%address s+(scot %ux address.up)]
@@ -41,7 +38,6 @@
           [%name ?~(name.up [%s ''] s+(scot %tas u.name.up))]
           [%uri ?~(uri.up [%s ''] s+(scot %tas u.uri.up))]
       ==
-    ::
         %no-user    :: fix ~
       (pairs ~[['s' %s '']])
     ==
